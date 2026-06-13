@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/themes/app_themes.dart';
 import '../../core/themes/theme_provider.dart';
@@ -88,6 +89,37 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 32),
               Text('Más features próximamente 🔮', style: TextStyle(fontSize: 13, color: colors.textoMuted)),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: colors.fondoSuperficie,
+                      title: Text('Resetear perfil', style: TextStyle(color: colors.textoPrincipal)),
+                      content: Text('Esto borra tu XP y nivel. ¿Confirmás?', style: TextStyle(color: colors.textoSecundario)),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancelar', style: TextStyle(color: colors.textoMuted))),
+                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Resetear', style: TextStyle(color: Colors.redAccent))),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) {
+                    final uid = FirebaseAuth.instance.currentUser?.uid;
+                    if (uid != null) {
+                      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+                        'nivel': 1,
+                        'xpAcumulada': 0,
+                        'titulo': 'Iniciado de la Grieta',
+                        'artefacto': 'Diario de la Grieta Menor',
+                      });
+                    }
+                  }
+                },
+                icon: const Icon(Icons.refresh, color: Colors.redAccent, size: 16),
+                label: const Text('Resetear perfil (temp)', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+                style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.redAccent, width: 0.5)),
+              ),
             ],
           ),
         ),

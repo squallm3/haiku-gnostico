@@ -10,12 +10,6 @@ import '../../core/models/mission_model.dart';
 import '../../services/firestore_service.dart';
 import 'levelup_overlay.dart';
 
-final _userProvider = StreamProvider<UserModel?>((ref) {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  if (uid == null) return Stream.value(null);
-  return ref.read(firestoreServiceProvider).userStream(uid);
-});
-
 final _pleromiProvider = StreamProvider.autoDispose<List<PleromiModel>>((ref) {
   final uid = FirebaseAuth.instance.currentUser?.uid;
   if (uid == null) return Stream.value([]);
@@ -30,7 +24,6 @@ class PleromaScreen extends ConsumerStatefulWidget {
 
 class _PleromaScreenState extends ConsumerState<PleromaScreen> {
   int? _levelUpNivel;
-
   void _mostrarLevelUp(int nivel) => setState(() => _levelUpNivel = nivel);
   void _ocultarLevelUp() => setState(() => _levelUpNivel = null);
 
@@ -85,7 +78,7 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
   void _showAddMision(BuildContext context, AppColors colors, String uid) {
     if (uid.isEmpty) return;
     final tituloCtrl = TextEditingController();
-    bool _cargando = false;
+    bool cargando = false;
 
     showModalBottomSheet(
       context: context,
@@ -94,10 +87,7 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 24, right: 24, top: 24,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
+          padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -117,9 +107,9 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _cargando ? null : () async {
+                onPressed: cargando ? null : () async {
                   if (tituloCtrl.text.trim().isEmpty) return;
-                  setModalState(() => _cargando = true);
+                  setModalState(() => cargando = true);
                   try {
                     final fs = ref.read(firestoreServiceProvider);
                     final pleromos = await fs.pleromiStream(uid).first;
@@ -140,18 +130,13 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
                     } else {
                       sizigiaId = sizigias.first.id;
                     }
-                    await fs.createMision(
-                      pleromiId: pleromiId,
-                      sizigiaId: sizigiaId,
-                      userId: uid,
-                      titulo: tituloCtrl.text.trim(),
-                    );
+                    await fs.createMision(pleromiId: pleromiId, sizigiaId: sizigiaId, userId: uid, titulo: tituloCtrl.text.trim());
                     if (ctx.mounted) Navigator.pop(ctx);
                   } catch (e) {
-                    setModalState(() => _cargando = false);
+                    setModalState(() => cargando = false);
                   }
                 },
-                child: _cargando
+                child: cargando
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Text('Cargar'),
               ),
@@ -180,11 +165,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 8),
           Text('Cargá tu primera misión', textAlign: TextAlign.center, style: TextStyle(color: colors.textoSecundario, fontSize: 13)),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: onAdd,
-            icon: const Icon(Icons.add),
-            label: const Text('Nueva Misión'),
-          ),
+          ElevatedButton.icon(onPressed: onAdd, icon: const Icon(Icons.add), label: const Text('Nueva Misión')),
         ],
       ),
     );
@@ -196,29 +177,18 @@ class _PleromiCard extends StatelessWidget {
   final AppColors colors;
   final String userId;
   final Function(int) onLevelUp;
-
   const _PleromiCard({required this.pleromi, required this.colors, required this.userId, required this.onLevelUp});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: FirebaseFirestore.instance
-          .collection('pleromos')
-          .doc(pleromi.id)
-          .collection('sizigias')
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('pleromos').doc(pleromi.id).collection('sizigias').snapshots(),
       builder: (context, sizSnap) {
         if (!sizSnap.hasData) return const SizedBox.shrink();
         final sizigias = sizSnap.data!.docs;
         return Column(
           children: sizigias.map((siz) => StreamBuilder(
-            stream: FirebaseFirestore.instance
-                .collection('pleromos')
-                .doc(pleromi.id)
-                .collection('sizigias')
-                .doc(siz.id)
-                .collection('misiones')
-                .snapshots(),
+            stream: FirebaseFirestore.instance.collection('pleromos').doc(pleromi.id).collection('sizigias').doc(siz.id).collection('misiones').snapshots(),
             builder: (context, misSnap) {
               if (!misSnap.hasData) return const SizedBox.shrink();
               final misiones = misSnap.data!.docs.map(MisionModel.fromFirestore).toList();
@@ -247,61 +217,83 @@ class _MisionCard extends ConsumerWidget {
   final String userId;
   final AppColors colors;
   final Function(int) onLevelUp;
-
   const _MisionCard({required this.mision, required this.pleromiId, required this.sizigiaId, required this.userId, required this.colors, required this.onLevelUp});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
-      onTap: () async {
-        if (mision.completada) {
-          await ref.read(firestoreServiceProvider).desmarcarMision(
-            pleromiId: pleromiId,
-            sizigiaId: sizigiaId,
-            misionId: mision.id,
-          );
-        } else {
-          await ref.read(firestoreServiceProvider).completarMision(
-            userId: userId,
-            pleromiId: pleromiId,
-            sizigiaId: sizigiaId,
-            misionId: mision.id,
-          );
-        }
-      },
-      child: Container(
+    return Dismissible(
+      key: Key(mision.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: colors.fondoSuperficie,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: mision.completada ? colors.bordeSutil.withValues(alpha: 0.3) : colors.bordeSutil, width: 0.5),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: mision.completada ? colors.acentoPrimario : Colors.transparent,
-                border: Border.all(color: mision.completada ? colors.acentoPrimario : colors.bordeSutil, width: 2),
+        decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(14)),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Icon(Icons.delete_outline, color: Colors.white, size: 24),
+      ),
+      confirmDismiss: (_) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: colors.fondoSuperficie,
+            title: Text('Eliminar misión', style: TextStyle(color: colors.textoPrincipal)),
+            content: Text('¿Eliminás "${mision.titulo}"?', style: TextStyle(color: colors.textoSecundario)),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancelar', style: TextStyle(color: colors.textoMuted))),
+              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar', style: TextStyle(color: Colors.redAccent))),
+            ],
+          ),
+        ) ?? false;
+      },
+      onDismissed: (_) async {
+        await FirebaseFirestore.instance
+            .collection('pleromos').doc(pleromiId)
+            .collection('sizigias').doc(sizigiaId)
+            .collection('misiones').doc(mision.id)
+            .delete();
+      },
+      child: GestureDetector(
+        onTap: () async {
+          if (mision.completada) {
+            await ref.read(firestoreServiceProvider).desmarcarMision(pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
+          } else {
+            await ref.read(firestoreServiceProvider).completarMision(userId: userId, pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: colors.fondoSuperficie,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: mision.completada ? colors.bordeSutil.withValues(alpha: 0.3) : colors.bordeSutil, width: 0.5),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: mision.completada ? colors.acentoPrimario : Colors.transparent,
+                  border: Border.all(color: mision.completada ? colors.acentoPrimario : colors.bordeSutil, width: 2),
+                ),
+                child: mision.completada ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
               ),
-              child: mision.completada ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                mision.titulo,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: mision.completada ? colors.textoMuted : colors.textoPrincipal,
-                  decoration: mision.completada ? TextDecoration.lineThrough : null,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  mision.titulo,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: mision.completada ? colors.textoMuted : colors.textoPrincipal,
+                    decoration: mision.completada ? TextDecoration.lineThrough : null,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
