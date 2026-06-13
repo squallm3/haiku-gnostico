@@ -1,0 +1,309 @@
+// lib/features/missions/pleroma_screen.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/themes/app_themes.dart';
+import '../../core/themes/theme_provider.dart';
+import '../../core/models/user_model.dart';
+import '../../core/models/mission_model.dart';
+import '../../services/firestore_service.dart';
+import 'levelup_overlay.dart';
+
+final _userProvider = StreamProvider<UserModel?>((ref) {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return Stream.value(null);
+  return ref.read(firestoreServiceProvider).userStream(uid);
+});
+
+final _pleromiProvider = StreamProvider.autoDispose<List<PleromiModel>>((ref) {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return Stream.value([]);
+  return ref.read(firestoreServiceProvider).pleromiStream(uid);
+});
+
+class PleromaScreen extends ConsumerStatefulWidget {
+  const PleromaScreen({super.key});
+  @override
+  ConsumerState<PleromaScreen> createState() => _PleromaScreenState();
+}
+
+class _PleromaScreenState extends ConsumerState<PleromaScreen> {
+  int? _levelUpNivel;
+
+  void _mostrarLevelUp(int nivel) => setState(() => _levelUpNivel = nivel);
+  void _ocultarLevelUp() => setState(() => _levelUpNivel = null);
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = ref.watch(themeProvider);
+    final colors = AppColors.fromTema(tema);
+    final pleromiAsync = ref.watch(_pleromiProvider);
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: colors.fondoPrincipal,
+          appBar: AppBar(
+            title: Text('Misiones', style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.add, color: colors.acentoSecundario),
+                onPressed: () => _showAddMision(context, colors, uid),
+              ),
+            ],
+          ),
+          body: pleromiAsync.when(
+            loading: () => Center(child: CircularProgressIndicator(color: colors.acentoPrimario)),
+            error: (e, _) => Center(child: CircularProgressIndicator(color: colors.acentoPrimario)),
+            data: (pleromos) {
+              if (pleromos.isEmpty) {
+                return _EmptyState(colors: colors, onAdd: () => _showAddMision(context, colors, uid));
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: pleromos.length,
+                itemBuilder: (_, i) => _PleromiCard(
+                  pleromi: pleromos[i],
+                  colors: colors,
+                  userId: uid,
+                  onLevelUp: _mostrarLevelUp,
+                ),
+              );
+            },
+          ),
+        ),
+        if (_levelUpNivel != null)
+          Positioned.fill(
+            child: LevelUpOverlay(nuevoNivel: _levelUpNivel!, onDismiss: _ocultarLevelUp),
+          ),
+      ],
+    );
+  }
+
+  void _showAddMision(BuildContext context, AppColors colors, String uid) {
+    if (uid.isEmpty) return;
+    final tituloCtrl = TextEditingController();
+    bool _cargando = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: colors.fondoSuperficie,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 24, right: 24, top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Nueva Misión', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textoPrincipal)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: tituloCtrl,
+                autofocus: true,
+                style: TextStyle(color: colors.textoPrincipal),
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  labelText: 'Nombre de la misión',
+                  hintText: 'ej: Meditar 10 minutos...',
+                  hintStyle: TextStyle(color: colors.textoMuted),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _cargando ? null : () async {
+                  if (tituloCtrl.text.trim().isEmpty) return;
+                  setModalState(() => _cargando = true);
+                  try {
+                    final fs = ref.read(firestoreServiceProvider);
+                    final pleromos = await fs.pleromiStream(uid).first;
+                    String pleromiId;
+                    if (pleromos.isEmpty) {
+                      await fs.createPleromi(uid, 'General');
+                      final nuevos = await fs.pleromiStream(uid).first;
+                      pleromiId = nuevos.first.id;
+                    } else {
+                      pleromiId = pleromos.first.id;
+                    }
+                    final sizigias = await fs.sizigiaStream(pleromiId).first;
+                    String sizigiaId;
+                    if (sizigias.isEmpty) {
+                      await fs.createSizigia(pleromiId, 'Misiones');
+                      final nuevas = await fs.sizigiaStream(pleromiId).first;
+                      sizigiaId = nuevas.first.id;
+                    } else {
+                      sizigiaId = sizigias.first.id;
+                    }
+                    await fs.createMision(
+                      pleromiId: pleromiId,
+                      sizigiaId: sizigiaId,
+                      userId: uid,
+                      titulo: tituloCtrl.text.trim(),
+                    );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  } catch (e) {
+                    setModalState(() => _cargando = false);
+                  }
+                },
+                child: _cargando
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Cargar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final AppColors colors;
+  final VoidCallback onAdd;
+  const _EmptyState({required this.colors, required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('🌌', style: TextStyle(fontSize: 56)),
+          const SizedBox(height: 16),
+          Text('No tenés misiones todavía', style: TextStyle(fontSize: 18, color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 8),
+          Text('Cargá tu primera misión', textAlign: TextAlign.center, style: TextStyle(color: colors.textoSecundario, fontSize: 13)),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: onAdd,
+            icon: const Icon(Icons.add),
+            label: const Text('Nueva Misión'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PleromiCard extends StatelessWidget {
+  final PleromiModel pleromi;
+  final AppColors colors;
+  final String userId;
+  final Function(int) onLevelUp;
+
+  const _PleromiCard({required this.pleromi, required this.colors, required this.userId, required this.onLevelUp});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance
+          .collection('pleromos')
+          .doc(pleromi.id)
+          .collection('sizigias')
+          .snapshots(),
+      builder: (context, sizSnap) {
+        if (!sizSnap.hasData) return const SizedBox.shrink();
+        final sizigias = sizSnap.data!.docs;
+        return Column(
+          children: sizigias.map((siz) => StreamBuilder(
+            stream: FirebaseFirestore.instance
+                .collection('pleromos')
+                .doc(pleromi.id)
+                .collection('sizigias')
+                .doc(siz.id)
+                .collection('misiones')
+                .snapshots(),
+            builder: (context, misSnap) {
+              if (!misSnap.hasData) return const SizedBox.shrink();
+              final misiones = misSnap.data!.docs.map(MisionModel.fromFirestore).toList();
+              return Column(
+                children: misiones.map((m) => _MisionCard(
+                  mision: m,
+                  pleromiId: pleromi.id,
+                  sizigiaId: siz.id,
+                  userId: userId,
+                  colors: colors,
+                  onLevelUp: onLevelUp,
+                )).toList(),
+              );
+            },
+          )).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _MisionCard extends ConsumerWidget {
+  final MisionModel mision;
+  final String pleromiId;
+  final String sizigiaId;
+  final String userId;
+  final AppColors colors;
+  final Function(int) onLevelUp;
+
+  const _MisionCard({required this.mision, required this.pleromiId, required this.sizigiaId, required this.userId, required this.colors, required this.onLevelUp});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () async {
+        if (mision.completada) {
+          await ref.read(firestoreServiceProvider).desmarcarMision(
+            pleromiId: pleromiId,
+            sizigiaId: sizigiaId,
+            misionId: mision.id,
+          );
+        } else {
+          await ref.read(firestoreServiceProvider).completarMision(
+            userId: userId,
+            pleromiId: pleromiId,
+            sizigiaId: sizigiaId,
+            misionId: mision.id,
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: colors.fondoSuperficie,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: mision.completada ? colors.bordeSutil.withValues(alpha: 0.3) : colors.bordeSutil, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: mision.completada ? colors.acentoPrimario : Colors.transparent,
+                border: Border.all(color: mision.completada ? colors.acentoPrimario : colors.bordeSutil, width: 2),
+              ),
+              child: mision.completada ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                mision.titulo,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: mision.completada ? colors.textoMuted : colors.textoPrincipal,
+                  decoration: mision.completada ? TextDecoration.lineThrough : null,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
