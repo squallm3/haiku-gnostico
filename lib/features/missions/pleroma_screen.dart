@@ -80,14 +80,14 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
     if (uid.isEmpty) return;
     final tituloCtrl = TextEditingController();
     bool cargando = false;
-    int xpIndex = 3; // default: Una bandaaa (777)
+    int xpIndex = 2; // default: Un toco (333)
     final xpOpciones = [
       {'label': 'No lo merezco', 'xp': 0},
       {'label': 'Un poquito', 'xp': 111},
       {'label': 'Un toco', 'xp': 333},
       {'label': 'Una bandaaa', 'xp': 777},
     ];
-    final xpScrollCtrl = FixedExtentScrollController(initialItem: 3);
+    final xpScrollCtrl = FixedExtentScrollController(initialItem: 2);
 
     showModalBottomSheet(
       context: context,
@@ -433,20 +433,7 @@ class _MisionCard extends ConsumerWidget {
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete_outline, color: Colors.white, size: 24),
       ),
-      confirmDismiss: (_) async {
-        return await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: colors.fondoSuperficie,
-            title: Text('Eliminar misión', style: TextStyle(color: colors.textoPrincipal)),
-            content: Text('¿Eliminás "${mision.titulo}"?', style: TextStyle(color: colors.textoSecundario)),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancelar', style: TextStyle(color: colors.textoMuted))),
-              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar', style: TextStyle(color: Colors.redAccent))),
-            ],
-          ),
-        ) ?? false;
-      },
+      confirmDismiss: (_) async => true,
       onDismissed: (_) async {
         await FirebaseFirestore.instance
             .collection('pleromos').doc(pleromiId)
@@ -502,6 +489,7 @@ class _MisionCard extends ConsumerWidget {
                         '+${mision.xpRecompensa}',
                         style: TextStyle(fontSize: 10, color: colors.acentoPrimario.withValues(alpha: 0.7)),
                       ),
+
                   ],
                 ),
               ),
