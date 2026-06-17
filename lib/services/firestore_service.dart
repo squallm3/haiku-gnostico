@@ -166,6 +166,7 @@ class FirestoreService {
     required String titulo,
     String descripcion = '',
     List<String> tags = const [],
+    int? xpRecompensa,
   }) async {
     await _db
         .collection('pleromos')
@@ -178,7 +179,7 @@ class FirestoreService {
       'descripcion': descripcion,
       'completada': false,
       'fechaCompletada': null,
-      'xpRecompensa': XP_POR_MISION,
+      'xpRecompensa': xpRecompensa ?? XP_POR_MISION,
       'tags': tags,
       'userId': userId,
     });

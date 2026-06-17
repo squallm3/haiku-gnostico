@@ -80,6 +80,14 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
     if (uid.isEmpty) return;
     final tituloCtrl = TextEditingController();
     bool cargando = false;
+    int xpIndex = 3; // default: Una bandaaa (777)
+    final xpOpciones = [
+      {'label': 'No lo merezco', 'xp': 0},
+      {'label': 'Un poquito', 'xp': 111},
+      {'label': 'Un toco', 'xp': 333},
+      {'label': 'Una bandaaa', 'xp': 777},
+    ];
+    final xpScrollCtrl = FixedExtentScrollController(initialItem: 3);
 
     showModalBottomSheet(
       context: context,
@@ -106,7 +114,41 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
                   hintStyle: TextStyle(color: colors.textoMuted),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+              Container(
+                height: 100,
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: colors.bordeSutil, width: 0.5),
+                    bottom: BorderSide(color: colors.bordeSutil, width: 0.5),
+                  ),
+                ),
+                child: ListWheelScrollView.useDelegate(
+                  controller: xpScrollCtrl,
+                  itemExtent: 36,
+                  perspective: 0.003,
+                  diameterRatio: 1.8,
+                  physics: const FixedExtentScrollPhysics(),
+                  onSelectedItemChanged: (i) => setModalState(() => xpIndex = i),
+                  childDelegate: ListWheelChildBuilderDelegate(
+                    childCount: xpOpciones.length,
+                    builder: (ctx, i) {
+                      final isSelected = i == xpIndex;
+                      return Center(
+                        child: Text(
+                          '${xpOpciones[i]['label']}  ${xpOpciones[i]['xp'] == 0 ? '' : '+${xpOpciones[i]['xp']} XP'}',
+                          style: TextStyle(
+                            fontSize: isSelected ? 15 : 12,
+                            fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                            color: isSelected ? colors.acentoSecundario : colors.textoMuted,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: cargando ? null : () async {
                   if (tituloCtrl.text.trim().isEmpty) return;
@@ -136,7 +178,7 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
                         targetSizigiaId = sizigias.first.id;
                       }
                     }
-                    await fs.createMision(pleromiId: pleromiId, sizigiaId: targetSizigiaId, userId: uid, titulo: tituloCtrl.text.trim());
+                    await fs.createMision(pleromiId: pleromiId, sizigiaId: targetSizigiaId, userId: uid, titulo: tituloCtrl.text.trim(), xpRecompensa: xpOpciones[xpIndex]['xp'] as int);
                     if (ctx.mounted) Navigator.pop(ctx);
                   } catch (e) {
                     setModalState(() => cargando = false);
@@ -442,14 +484,25 @@ class _MisionCard extends ConsumerWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  mision.titulo,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: mision.completada ? colors.textoMuted : colors.textoPrincipal,
-                    decoration: mision.completada ? TextDecoration.lineThrough : null,
-                  ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        mision.titulo,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: mision.completada ? colors.textoMuted : colors.textoPrincipal,
+                          decoration: mision.completada ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                    ),
+                    if (mision.xpRecompensa > 0)
+                      Text(
+                        '+${mision.xpRecompensa}',
+                        style: TextStyle(fontSize: 10, color: colors.acentoPrimario.withValues(alpha: 0.7)),
+                      ),
+                  ],
                 ),
               ),
             ],
