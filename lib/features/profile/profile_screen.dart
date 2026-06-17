@@ -23,9 +23,23 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('Perfil', style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
         actions: [
-          IconButton(
-            icon: Icon(Icons.logout, color: colors.textoMuted),
-            onPressed: () => context.go('/saliendo'),
+          PopupMenuButton<String>(
+            icon: Icon(Icons.settings_outlined, color: colors.textoMuted),
+            color: colors.fondoSuperficie,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.bordeSutil, width: 0.5)),
+            onSelected: (value) {
+              if (value == 'salir') context.go('/saliendo');
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'salir',
+                child: Row(children: [
+                  Icon(Icons.logout, size: 16, color: colors.textoSecundario),
+                  const SizedBox(width: 10),
+                  Text('Salir', style: TextStyle(color: colors.textoPrincipal, fontSize: 14)),
+                ]),
+              ),
+            ],
           ),
         ],
       ),

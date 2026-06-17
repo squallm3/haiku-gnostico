@@ -24,6 +24,8 @@ class PleromaScreen extends ConsumerStatefulWidget {
 
 class _PleromaScreenState extends ConsumerState<PleromaScreen> {
   int? _levelUpNivel;
+  String? _selectedSizigiaId;
+
   void _mostrarLevelUp(int nivel) => setState(() => _levelUpNivel = nivel);
   void _ocultarLevelUp() => setState(() => _levelUpNivel = null);
 
@@ -54,15 +56,14 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
               if (pleromos.isEmpty) {
                 return _EmptyState(colors: colors, onAdd: () => _showAddMision(context, colors, uid));
               }
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: pleromos.length,
-                itemBuilder: (_, i) => _PleromiCard(
-                  pleromi: pleromos[i],
-                  colors: colors,
-                  userId: uid,
-                  onLevelUp: _mostrarLevelUp,
-                ),
+              final pleromi = pleromos.first;
+              return _MisionesConTabs(
+                pleromi: pleromi,
+                colors: colors,
+                userId: uid,
+                onLevelUp: _mostrarLevelUp,
+                onAddMision: (sizigiaId) => _showAddMision(context, colors, uid, sizigiaId: sizigiaId),
+                onAddSizigia: () => _showAddSizigia(context, colors, pleromi.id),
               );
             },
           ),
@@ -75,7 +76,7 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
     );
   }
 
-  void _showAddMision(BuildContext context, AppColors colors, String uid) {
+  void _showAddMision(BuildContext context, AppColors colors, String uid, {String? sizigiaId}) {
     if (uid.isEmpty) return;
     final tituloCtrl = TextEditingController();
     bool cargando = false;
@@ -121,16 +122,21 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
                     } else {
                       pleromiId = pleromos.first.id;
                     }
-                    final sizigias = await fs.sizigiaStream(pleromiId).first;
-                    String sizigiaId;
-                    if (sizigias.isEmpty) {
-                      await fs.createSizigia(pleromiId, 'Misiones');
-                      final nuevas = await fs.sizigiaStream(pleromiId).first;
-                      sizigiaId = nuevas.first.id;
+                    // Usar la sizigia seleccionada o la primera disponible
+                    String targetSizigiaId;
+                    if (sizigiaId != null) {
+                      targetSizigiaId = sizigiaId;
                     } else {
-                      sizigiaId = sizigias.first.id;
+                      final sizigias = await fs.sizigiaStream(pleromiId).first;
+                      if (sizigias.isEmpty) {
+                        await fs.createSizigia(pleromiId, 'Misiones');
+                        final nuevas = await fs.sizigiaStream(pleromiId).first;
+                        targetSizigiaId = nuevas.first.id;
+                      } else {
+                        targetSizigiaId = sizigias.first.id;
+                      }
                     }
-                    await fs.createMision(pleromiId: pleromiId, sizigiaId: sizigiaId, userId: uid, titulo: tituloCtrl.text.trim());
+                    await fs.createMision(pleromiId: pleromiId, sizigiaId: targetSizigiaId, userId: uid, titulo: tituloCtrl.text.trim());
                     if (ctx.mounted) Navigator.pop(ctx);
                   } catch (e) {
                     setModalState(() => cargando = false);
@@ -144,6 +150,198 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showAddSizigia(BuildContext context, AppColors colors, String pleromiId) {
+    final ctrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: colors.fondoSuperficie,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Nueva sub-lista', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textoPrincipal)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              style: TextStyle(color: colors.textoPrincipal),
+              decoration: InputDecoration(labelText: 'Nombre', hintStyle: TextStyle(color: colors.textoMuted)),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                if (ctrl.text.trim().isEmpty) return;
+                await ref.read(firestoreServiceProvider).createSizigia(pleromiId, ctrl.text.trim());
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text('Crear'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Widget principal con TabBar
+class _MisionesConTabs extends StatefulWidget {
+  final PleromiModel pleromi;
+  final AppColors colors;
+  final String userId;
+  final Function(int) onLevelUp;
+  final Function(String?) onAddMision;
+  final VoidCallback onAddSizigia;
+
+  const _MisionesConTabs({required this.pleromi, required this.colors, required this.userId, required this.onLevelUp, required this.onAddMision, required this.onAddSizigia});
+
+  @override
+  State<_MisionesConTabs> createState() => _MisionesConTabsState();
+}
+
+class _MisionesConTabsState extends State<_MisionesConTabs> with SingleTickerProviderStateMixin {
+  TabController? _tabController;
+  List<QueryDocumentSnapshot> _sizigias = [];
+  int _tabIndex = 0; // 0 = Todas, 1+ = sizigias
+
+  @override
+  void dispose() {
+    _tabController?.dispose();
+    super.dispose();
+  }
+
+  Color _tabBarColor(AppColors colors) {
+    if (colors.fondoHeader == const Color(0xFF1A0000)) return const Color(0xFF3D1400); // Caos - marron
+    if (colors.fondoHeader == const Color(0xFF003366)) return const Color(0xFF002244); // Conurbano
+    return const Color(0xFF110626); // Gnostico
+  }
+
+  void _rebuildTabs(List<QueryDocumentSnapshot> sizigias) {
+    if (_sizigias.length != sizigias.length) {
+      _tabController?.dispose();
+      _tabController = TabController(length: sizigias.length + 2, vsync: this); // +2 = Todas + el +
+      _tabController!.addListener(() {
+        if (!_tabController!.indexIsChanging) {
+          if (_tabController!.index == sizigias.length + 1) {
+            // Tocaron el +
+            widget.onAddSizigia();
+            _tabController!.animateTo(_tabIndex);
+          } else {
+            setState(() => _tabIndex = _tabController!.index);
+          }
+        }
+      });
+      _sizigias = sizigias;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.colors;
+
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance
+          .collection('pleromos').doc(widget.pleromi.id)
+          .collection('sizigias')
+          .snapshots(),
+      builder: (context, snap) {
+        if (!snap.hasData) return const SizedBox.shrink();
+        final sizigias = snap.data!.docs;
+        _rebuildTabs(sizigias);
+        if (_tabController == null) return const SizedBox.shrink();
+
+        final selectedSizigiaId = _tabIndex == 0 ? null : sizigias[_tabIndex - 1].id;
+
+        return Column(
+          children: [
+            // TabBar estilo Material
+            Container(
+              decoration: BoxDecoration(
+                color: _tabBarColor(colors),
+                border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.2), width: 0.5)),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                indicatorColor: Colors.white,
+                indicatorWeight: 2,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white.withValues(alpha: 0.45),
+                labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                unselectedLabelStyle: const TextStyle(fontSize: 13),
+                dividerColor: Colors.transparent,
+                tabs: [
+                  const Tab(text: 'Todas'),
+                  ...sizigias.map((s) => Tab(text: s['nombre'] ?? '')),
+                  Tab(
+                    child: Icon(Icons.add, size: 18, color: colors.textoMuted),
+                  ),
+                ],
+              ),
+            ),
+            // Lista de misiones
+            Expanded(
+              child: _MisionList(
+                pleromi: widget.pleromi,
+                colors: colors,
+                userId: widget.userId,
+                onLevelUp: widget.onLevelUp,
+                selectedSizigiaId: selectedSizigiaId,
+                sizigias: sizigias,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MisionList extends StatelessWidget {
+  final PleromiModel pleromi;
+  final AppColors colors;
+  final String userId;
+  final Function(int) onLevelUp;
+  final String? selectedSizigiaId;
+  final List<QueryDocumentSnapshot> sizigias;
+
+  const _MisionList({required this.pleromi, required this.colors, required this.userId, required this.onLevelUp, required this.selectedSizigiaId, required this.sizigias});
+
+  @override
+  Widget build(BuildContext context) {
+    final filtradas = selectedSizigiaId != null
+        ? sizigias.where((s) => s.id == selectedSizigiaId).toList()
+        : sizigias;
+
+    return ListView(
+      padding: const EdgeInsets.only(top: 8),
+      children: filtradas.map((siz) => StreamBuilder(
+        stream: FirebaseFirestore.instance
+            .collection('pleromos').doc(pleromi.id)
+            .collection('sizigias').doc(siz.id)
+            .collection('misiones').snapshots(),
+        builder: (context, misSnap) {
+          if (!misSnap.hasData) return const SizedBox.shrink();
+          final misiones = misSnap.data!.docs.map(MisionModel.fromFirestore).toList();
+          return Column(
+            children: misiones.map((m) => _MisionCard(
+              mision: m,
+              pleromiId: pleromi.id,
+              sizigiaId: siz.id,
+              userId: userId,
+              colors: colors,
+              onLevelUp: onLevelUp,
+            )).toList(),
+          );
+        },
+      )).toList(),
     );
   }
 }
@@ -168,44 +366,6 @@ class _EmptyState extends StatelessWidget {
           ElevatedButton.icon(onPressed: onAdd, icon: const Icon(Icons.add), label: const Text('Nueva Misión')),
         ],
       ),
-    );
-  }
-}
-
-class _PleromiCard extends StatelessWidget {
-  final PleromiModel pleromi;
-  final AppColors colors;
-  final String userId;
-  final Function(int) onLevelUp;
-  const _PleromiCard({required this.pleromi, required this.colors, required this.userId, required this.onLevelUp});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: FirebaseFirestore.instance.collection('pleromos').doc(pleromi.id).collection('sizigias').snapshots(),
-      builder: (context, sizSnap) {
-        if (!sizSnap.hasData) return const SizedBox.shrink();
-        final sizigias = sizSnap.data!.docs;
-        return Column(
-          children: sizigias.map((siz) => StreamBuilder(
-            stream: FirebaseFirestore.instance.collection('pleromos').doc(pleromi.id).collection('sizigias').doc(siz.id).collection('misiones').snapshots(),
-            builder: (context, misSnap) {
-              if (!misSnap.hasData) return const SizedBox.shrink();
-              final misiones = misSnap.data!.docs.map(MisionModel.fromFirestore).toList();
-              return Column(
-                children: misiones.map((m) => _MisionCard(
-                  mision: m,
-                  pleromiId: pleromi.id,
-                  sizigiaId: siz.id,
-                  userId: userId,
-                  colors: colors,
-                  onLevelUp: onLevelUp,
-                )).toList(),
-              );
-            },
-          )).toList(),
-        );
-      },
     );
   }
 }
