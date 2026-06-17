@@ -12,6 +12,45 @@ import '../../services/auth_service.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
+  void _showPasswordDialog(BuildContext context, AppColors colors) {
+    final ctrl = TextEditingController();
+    bool enviado = false;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          backgroundColor: colors.fondoSuperficie,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.bordeSutil, width: 0.5)),
+          title: Text('Ingresar password', style: TextStyle(color: colors.textoPrincipal, fontSize: 16, fontWeight: FontWeight.w500)),
+          content: enviado
+              ? Row(children: [
+                  Icon(Icons.check_circle, color: colors.acentoPrimario, size: 20),
+                  const SizedBox(width: 8),
+                  Text('¡Password correcto!', style: TextStyle(color: colors.textoPrincipal)),
+                ])
+              : TextField(
+                  controller: ctrl,
+                  obscureText: true,
+                  style: TextStyle(color: colors.textoPrincipal),
+                  decoration: InputDecoration(
+                    hintText: 'Ingresá tu password...',
+                    hintStyle: TextStyle(color: colors.textoMuted),
+                  ),
+                ),
+          actions: enviado
+              ? [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cerrar', style: TextStyle(color: colors.acentoSecundario)))]
+              : [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancelar', style: TextStyle(color: colors.textoMuted))),
+                  ElevatedButton(
+                    onPressed: () => setState(() => enviado = true),
+                    child: const Text('Enviar'),
+                  ),
+                ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tema = ref.watch(themeProvider);
@@ -29,8 +68,17 @@ class ProfileScreen extends ConsumerWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.bordeSutil, width: 0.5)),
             onSelected: (value) {
               if (value == 'salir') context.go('/saliendo');
+              if (value == 'password') _showPasswordDialog(context, colors);
             },
             itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'password',
+                child: Row(children: [
+                  Icon(Icons.vpn_key_outlined, size: 16, color: colors.textoSecundario),
+                  const SizedBox(width: 10),
+                  Text('Ingresar password', style: TextStyle(color: colors.textoPrincipal, fontSize: 14)),
+                ]),
+              ),
               PopupMenuItem(
                 value: 'salir',
                 child: Row(children: [
