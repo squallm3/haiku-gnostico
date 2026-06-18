@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rxdart/rxdart.dart';
 import '../../core/themes/app_themes.dart';
 import '../../core/themes/theme_provider.dart';
 import '../../core/models/user_model.dart';
@@ -394,6 +395,17 @@ class _MisionList extends StatelessWidget {
         ? sizigias.where((s) => s.id == selectedSizigiaId).toList()
         : sizigias;
 
+    // Si es "Todas" (selectedSizigiaId == null), agrupamos completadas globalmente
+    if (selectedSizigiaId == null) {
+      return _AllMisionsList(
+        pleromi: pleromi,
+        sizigias: filtradas,
+        colors: colors,
+        userId: userId,
+        onLevelUp: onLevelUp,
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.only(top: 8),
       children: filtradas.map((siz) => StreamBuilder(
@@ -441,6 +453,90 @@ class _EmptyState extends StatelessWidget {
           ElevatedButton.icon(onPressed: onAdd, icon: const Icon(Icons.add), label: const Text('Nueva Misión')),
         ],
       ),
+    );
+  }
+}
+
+// Vista "Todas" — pendientes de todas las sublistas, una sola seccion completadas al final
+class _AllMisionsList extends StatefulWidget {
+  final PleromiModel pleromi;
+  final List<QueryDocumentSnapshot> sizigias;
+  final AppColors colors;
+  final String userId;
+  final Function(int) onLevelUp;
+
+  const _AllMisionsList({required this.pleromi, required this.sizigias, required this.colors, required this.userId, required this.onLevelUp});
+
+  @override
+  State<_AllMisionsList> createState() => _AllMisionsListState();
+}
+
+class _AllMisionsListState extends State<_AllMisionsList> {
+  bool _completadasExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // Collect all streams
+    final streams = widget.sizigias.map((siz) =>
+      FirebaseFirestore.instance
+        .collection('pleromos').doc(widget.pleromi.id)
+        .collection('sizigias').doc(siz.id)
+        .collection('misiones').snapshots()
+        .map((snap) => MapEntry(siz.id, snap.docs.map(MisionModel.fromFirestore).toList()))
+    ).toList();
+
+    return StreamBuilder<List<MapEntry<String, List<MisionModel>>>>(
+      stream: streams.isEmpty ? Stream.value([]) : Rx.combineLatestList(streams),
+      builder: (context, snap) {
+        if (!snap.hasData) return const SizedBox.shrink();
+        final allData = snap.data!;
+        final pendientes = allData.expand((e) => e.value.where((m) => !m.completada).map((m) => MapEntry(e.key, m))).toList();
+        final completadas = allData.expand((e) => e.value.where((m) => m.completada).map((m) => MapEntry(e.key, m))).toList();
+
+        return ListView(
+          padding: const EdgeInsets.only(top: 8),
+          children: [
+            ...pendientes.map((e) => _MisionCard(
+              mision: e.value,
+              pleromiId: widget.pleromi.id,
+              sizigiaId: e.key,
+              userId: widget.userId,
+              colors: widget.colors,
+              onLevelUp: widget.onLevelUp,
+            )),
+            if (completadas.isNotEmpty) ...[
+              GestureDetector(
+                onTap: () => setState(() => _completadasExpanded = !_completadasExpanded),
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: widget.colors.fondoSuperficie,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: widget.colors.bordeSutil, width: 0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(_completadasExpanded ? Icons.expand_less : Icons.expand_more, color: widget.colors.textoMuted, size: 18),
+                      const SizedBox(width: 8),
+                      Text('Completadas (${completadas.length})', style: TextStyle(fontSize: 13, color: widget.colors.textoMuted, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+              ),
+              if (_completadasExpanded)
+                ...completadas.map((e) => _MisionCard(
+                  mision: e.value,
+                  pleromiId: widget.pleromi.id,
+                  sizigiaId: e.key,
+                  userId: widget.userId,
+                  colors: widget.colors,
+                  onLevelUp: widget.onLevelUp,
+                )),
+            ],
+          ],
+        );
+      },
     );
   }
 }
@@ -529,7 +625,7 @@ class _MisionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Dismissible(
-      key: Key(mision.id),
+      key: ValueKey('${pleromiId}_${sizigiaId}_${mision.id}_${mision.completada}'),
       direction: DismissDirection.endToStart,
       background: Container(
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
