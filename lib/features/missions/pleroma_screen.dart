@@ -254,6 +254,20 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
   TabController? _tabController;
   List<QueryDocumentSnapshot> _sizigias = [];
   int _tabIndex = 0; // 0 = Todas, 1+ = sizigias
+  String _ordenActual = 'fecha';
+
+  PopupMenuItem<String> _buildOrdenItem(String value, String label, String actual, AppColors colors) {
+    final isSelected = actual == value;
+    return PopupMenuItem(
+      value: 'orden_$value',
+      child: Row(
+        children: [
+          SizedBox(width: 24, child: isSelected ? Icon(Icons.check, size: 16, color: colors.acentoPrimario) : null),
+          Text(label, style: TextStyle(color: colors.textoPrincipal, fontSize: 14)),
+        ],
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -352,11 +366,31 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.textoPrincipal),
                   ),
                   const Spacer(),
-                  IconButton(
+                  PopupMenuButton<String>(
                     icon: Icon(Icons.more_vert, color: colors.textoMuted, size: 22),
-                    onPressed: () {},
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    color: colors.fondoSuperficie,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.bordeSutil, width: 0.5)),
+                    onSelected: (value) {
+                      if (value.startsWith('orden_')) {
+                        setState(() => _ordenActual = value.replaceFirst('orden_', ''));
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      // Ordenar por
+                      PopupMenuItem(enabled: false, height: 28, child: Text('Ordenar por', style: TextStyle(fontSize: 11, color: colors.textoMuted, fontWeight: FontWeight.w600))),
+                      _buildOrdenItem('mi_orden', 'Mi orden', _ordenActual, colors),
+                      _buildOrdenItem('fecha', 'Fecha', _ordenActual, colors),
+                      _buildOrdenItem('fecha_limite', 'Fecha límite', _ordenActual, colors),
+                      _buildOrdenItem('destacadas', 'Destacadas recientemente', _ordenActual, colors),
+                      _buildOrdenItem('titulo', 'Título', _ordenActual, colors),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(value: 'renombrar', child: Text('Cambiar nombre de la lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
+                      PopupMenuItem(value: 'eliminar_lista', child: Text('Eliminar lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(value: 'imprimir', child: Text('Imprimir lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
+                      PopupMenuItem(value: 'borrar_completadas', child: Text('Borrar todas las tareas completadas', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
+                      PopupMenuItem(value: 'borrar_antiguas', enabled: false, child: Text('Borrar tareas antiguas', style: TextStyle(color: colors.textoMuted, fontSize: 14))),
+                    ],
                   ),
                 ],
               ),
