@@ -247,7 +247,7 @@ class _MisionesConTabs extends StatefulWidget {
   State<_MisionesConTabs> createState() => _MisionesConTabsState();
 }
 
-class _MisionesConTabsState extends State<_MisionesConTabs> with SingleTickerProviderStateMixin {
+class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderStateMixin {
   TabController? _tabController;
   List<QueryDocumentSnapshot> _sizigias = [];
   int _tabIndex = 0; // 0 = Todas, 1+ = sizigias
@@ -266,20 +266,21 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with SingleTickerPro
 
   void _rebuildTabs(List<QueryDocumentSnapshot> sizigias) {
     if (_sizigias.length != sizigias.length) {
-      _tabController?.dispose();
-      _tabController = TabController(length: sizigias.length + 2, vsync: this); // +2 = Todas + el +
-      _tabController!.addListener(() {
-        if (!_tabController!.indexIsChanging) {
-          if (_tabController!.index == sizigias.length + 1) {
-            // Tocaron el +
+      final oldController = _tabController;
+      final newController = TabController(length: sizigias.length + 2, vsync: this);
+      newController.addListener(() {
+        if (!newController.indexIsChanging) {
+          if (newController.index == sizigias.length + 1) {
             widget.onAddSizigia();
-            _tabController!.animateTo(_tabIndex);
+            newController.animateTo(_tabIndex);
           } else {
-            setState(() => _tabIndex = _tabController!.index);
+            setState(() => _tabIndex = newController.index);
           }
         }
       });
+      _tabController = newController;
       _sizigias = sizigias;
+      WidgetsBinding.instance.addPostFrameCallback((_) => oldController?.dispose());
     }
   }
 
@@ -294,7 +295,14 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with SingleTickerPro
           .snapshots(),
       builder: (context, snap) {
         if (!snap.hasData) return const SizedBox.shrink();
-        final sizigias = snap.data!.docs;
+        final sizigias = snap.data!.docs.toList()
+          ..sort((a, b) {
+            final aT = a.data()['creadoEn'];
+            final bT = b.data()['creadoEn'];
+            if (aT == null) return -1;
+            if (bT == null) return 1;
+            return (aT as dynamic).compareTo(bT);
+          });
         _rebuildTabs(sizigias);
         if (_tabController == null) return const SizedBox.shrink();
 
