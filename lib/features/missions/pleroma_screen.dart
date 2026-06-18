@@ -336,6 +336,25 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                 ],
               ),
             ),
+            // Header con titulo de sizigia seleccionada
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+              child: Row(
+                children: [
+                  Text(
+                    _tabIndex == 0 ? 'Todas' : (sizigias.isNotEmpty && _tabIndex <= sizigias.length ? sizigias[_tabIndex - 1]['nombre'] ?? '' : ''),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.textoPrincipal),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: Icon(Icons.more_vert, color: colors.textoMuted, size: 22),
+                    onPressed: () {},
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  ),
+                ],
+              ),
+            ),
             // Lista de misiones
             Expanded(
               child: _MisionList(
