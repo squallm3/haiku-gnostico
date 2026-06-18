@@ -45,7 +45,7 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
             actions: [
               IconButton(
                 icon: Icon(Icons.add, color: colors.acentoSecundario),
-                onPressed: () => _showAddMision(context, colors, uid),
+                onPressed: () => _showAddMision(context, colors, uid, sizigiaId: _selectedSizigiaId),
               ),
             ],
           ),
@@ -64,6 +64,7 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
                 onLevelUp: _mostrarLevelUp,
                 onAddMision: (sizigiaId) => _showAddMision(context, colors, uid, sizigiaId: sizigiaId),
                 onAddSizigia: () => _showAddSizigia(context, colors, pleromi.id),
+                onSizigiaSelected: (id) => setState(() => _selectedSizigiaId = id),
               );
             },
           ),
@@ -240,8 +241,9 @@ class _MisionesConTabs extends StatefulWidget {
   final Function(int) onLevelUp;
   final Function(String?) onAddMision;
   final VoidCallback onAddSizigia;
+  final Function(String?) onSizigiaSelected;
 
-  const _MisionesConTabs({required this.pleromi, required this.colors, required this.userId, required this.onLevelUp, required this.onAddMision, required this.onAddSizigia});
+  const _MisionesConTabs({required this.pleromi, required this.colors, required this.userId, required this.onLevelUp, required this.onAddMision, required this.onAddSizigia, required this.onSizigiaSelected});
 
   @override
   State<_MisionesConTabs> createState() => _MisionesConTabsState();
@@ -275,6 +277,9 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
             newController.animateTo(_tabIndex);
           } else {
             setState(() => _tabIndex = newController.index);
+            final newSizigiaId = newController.index == 0 ? null
+                : (sizigias.length >= newController.index ? sizigias[newController.index - 1].id : null);
+            widget.onSizigiaSelected(newSizigiaId);
           }
         }
       });
