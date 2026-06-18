@@ -283,8 +283,12 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
 
   void _rebuildTabs(List<QueryDocumentSnapshot> sizigias) {
     if (_sizigias.length != sizigias.length) {
+      // Si el tab activo ya no existe, resetear a 0
+      if (_tabIndex > sizigias.length) {
+        _tabIndex = 0;
+      }
       final oldController = _tabController;
-      final newController = TabController(length: sizigias.length + 2, vsync: this);
+      final newController = TabController(length: sizigias.length + 2, vsync: this, initialIndex: _tabIndex);
       newController.addListener(() {
         if (!newController.indexIsChanging) {
           if (newController.index == sizigias.length + 1) {
@@ -370,9 +374,43 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                     icon: Icon(Icons.more_vert, color: colors.textoMuted, size: 22),
                     color: colors.fondoSuperficie,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.bordeSutil, width: 0.5)),
-                    onSelected: (value) {
+                    onSelected: (value) async {
                       if (value.startsWith('orden_')) {
                         setState(() => _ordenActual = value.replaceFirst('orden_', ''));
+                      } else if (value == 'eliminar_lista') {
+                        if (sizigias.length <= 1) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('No podés eliminar la única lista', style: TextStyle(color: colors.textoPrincipal)), backgroundColor: colors.fondoSuperficie),
+                          );
+                          return;
+                        }
+                        final sizigiaId = sizigias[_tabIndex - 1].id;
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            backgroundColor: colors.fondoSuperficie,
+                            title: Text('Eliminar lista', style: TextStyle(color: colors.textoPrincipal)),
+                            content: Text('¿Eliminás esta lista y todas sus tareas?', style: TextStyle(color: colors.textoSecundario)),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancelar', style: TextStyle(color: colors.textoMuted))),
+                              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar', style: TextStyle(color: Colors.redAccent))),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          // Borrar todas las misiones de la sizigia
+                          final misiones = await FirebaseFirestore.instance
+                              .collection('pleromos').doc(widget.pleromi.id)
+                              .collection('sizigias').doc(sizigiaId)
+                              .collection('misiones').get();
+                          for (final m in misiones.docs) { await m.reference.delete(); }
+                          // Borrar la sizigia
+                          await FirebaseFirestore.instance
+                              .collection('pleromos').doc(widget.pleromi.id)
+                              .collection('sizigias').doc(sizigiaId)
+                              .delete();
+                          setState(() => _tabIndex = 0);
+                        }
                       }
                     },
                     itemBuilder: (_) => [
