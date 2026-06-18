@@ -381,7 +381,6 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                       _buildOrdenItem('mi_orden', 'Mi orden', _ordenActual, colors),
                       _buildOrdenItem('fecha', 'Fecha', _ordenActual, colors),
                       _buildOrdenItem('fecha_limite', 'Fecha límite', _ordenActual, colors),
-                      _buildOrdenItem('destacadas', 'Destacadas recientemente', _ordenActual, colors),
                       _buildOrdenItem('titulo', 'Título', _ordenActual, colors),
                       const PopupMenuDivider(),
                       PopupMenuItem(value: 'renombrar', child: Text('Cambiar nombre de la lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
