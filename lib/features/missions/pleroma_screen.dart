@@ -404,15 +404,16 @@ class _MisionList extends StatelessWidget {
         builder: (context, misSnap) {
           if (!misSnap.hasData) return const SizedBox.shrink();
           final misiones = misSnap.data!.docs.map(MisionModel.fromFirestore).toList();
-          return Column(
-            children: misiones.map((m) => _MisionCard(
-              mision: m,
-              pleromiId: pleromi.id,
-              sizigiaId: siz.id,
-              userId: userId,
-              colors: colors,
-              onLevelUp: onLevelUp,
-            )).toList(),
+          final pendientes = misiones.where((m) => !m.completada).toList();
+          final completadas = misiones.where((m) => m.completada).toList();
+          return _MisionGroup(
+            pendientes: pendientes,
+            completadas: completadas,
+            pleromiId: pleromi.id,
+            sizigiaId: siz.id,
+            userId: userId,
+            colors: colors,
+            onLevelUp: onLevelUp,
           );
         },
       )).toList(),
@@ -440,6 +441,78 @@ class _EmptyState extends StatelessWidget {
           ElevatedButton.icon(onPressed: onAdd, icon: const Icon(Icons.add), label: const Text('Nueva Misión')),
         ],
       ),
+    );
+  }
+}
+
+class _MisionGroup extends StatefulWidget {
+  final List<MisionModel> pendientes;
+  final List<MisionModel> completadas;
+  final String pleromiId;
+  final String sizigiaId;
+  final String userId;
+  final AppColors colors;
+  final Function(int) onLevelUp;
+
+  const _MisionGroup({required this.pendientes, required this.completadas, required this.pleromiId, required this.sizigiaId, required this.userId, required this.colors, required this.onLevelUp});
+
+  @override
+  State<_MisionGroup> createState() => _MisionGroupState();
+}
+
+class _MisionGroupState extends State<_MisionGroup> {
+  bool _completadasExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ...widget.pendientes.map((m) => _MisionCard(
+          mision: m,
+          pleromiId: widget.pleromiId,
+          sizigiaId: widget.sizigiaId,
+          userId: widget.userId,
+          colors: widget.colors,
+          onLevelUp: widget.onLevelUp,
+        )),
+        if (widget.completadas.isNotEmpty) ...[
+          GestureDetector(
+            onTap: () => setState(() => _completadasExpanded = !_completadasExpanded),
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: widget.colors.fondoSuperficie,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: widget.colors.bordeSutil, width: 0.5),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _completadasExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: widget.colors.textoMuted,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Completadas (${widget.completadas.length})',
+                    style: TextStyle(fontSize: 13, color: widget.colors.textoMuted, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_completadasExpanded)
+            ...widget.completadas.map((m) => _MisionCard(
+              mision: m,
+              pleromiId: widget.pleromiId,
+              sizigiaId: widget.sizigiaId,
+              userId: widget.userId,
+              colors: widget.colors,
+              onLevelUp: widget.onLevelUp,
+            )),
+        ],
+      ],
     );
   }
 }
