@@ -41,14 +41,14 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
       children: [
         Scaffold(
           backgroundColor: colors.fondoPrincipal,
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => _showAddMision(context, colors, uid, sizigiaId: _selectedSizigiaId),
+            backgroundColor: colors.acentoPrimario,
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
           appBar: AppBar(
             title: Text('Misiones', style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
-            actions: [
-              IconButton(
-                icon: Icon(Icons.add, color: colors.acentoSecundario),
-                onPressed: () => _showAddMision(context, colors, uid, sizigiaId: _selectedSizigiaId),
-              ),
-            ],
+            actions: const [],
           ),
           body: pleromiAsync.when(
             loading: () => Center(child: CircularProgressIndicator(color: colors.acentoPrimario)),
