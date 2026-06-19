@@ -11,34 +11,58 @@ import '../../core/constants/levels.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  void _showPasswordDialog(BuildContext context, AppColors colors) {
+  void _showPasswordDialog(BuildContext context, AppColors colors, String uid) {
     final ctrl = TextEditingController();
-    bool enviado = false;
+    String? error;
+    bool cargando = false;
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
+        builder: (ctx, setModalState) => AlertDialog(
           backgroundColor: colors.fondoSuperficie,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.bordeSutil, width: 0.5)),
           title: Text('Ingresar password', style: TextStyle(color: colors.textoPrincipal, fontSize: 16, fontWeight: FontWeight.w500)),
-          content: enviado
-              ? Row(children: [
-                  Icon(Icons.check_circle, color: colors.acentoPrimario, size: 20),
-                  const SizedBox(width: 8),
-                  Text('¡Password correcto!', style: TextStyle(color: colors.textoPrincipal)),
-                ])
-              : TextField(
-                  controller: ctrl,
-                  obscureText: true,
-                  style: TextStyle(color: colors.textoPrincipal),
-                  decoration: InputDecoration(hintText: 'Ingresá tu password...', hintStyle: TextStyle(color: colors.textoMuted)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: ctrl,
+                obscureText: true,
+                style: TextStyle(color: colors.textoPrincipal),
+                decoration: InputDecoration(
+                  hintText: 'Ingresá tu password...',
+                  hintStyle: TextStyle(color: colors.textoMuted),
+                  errorText: error,
                 ),
-          actions: enviado
-              ? [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cerrar', style: TextStyle(color: colors.acentoSecundario)))]
-              : [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancelar', style: TextStyle(color: colors.textoMuted))),
-                  ElevatedButton(onPressed: () => setState(() => enviado = true), child: const Text('Enviar')),
-                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancelar', style: TextStyle(color: colors.textoMuted))),
+            ElevatedButton(
+              onPressed: cargando ? null : () async {
+                final nivel = validarPassword(ctrl.text);
+                if (nivel == null) {
+                  setModalState(() => error = 'Password incorrecto');
+                  return;
+                }
+                setModalState(() { cargando = true; error = null; });
+                final nivelData = getNivelData(nivel);
+                final xpMinimo = calcularXPParaNivel(nivel);
+                await FirebaseFirestore.instance.collection('users').doc(uid).update({
+                  'nivel': nivel,
+                  'xpAcumulada': xpMinimo,
+                  'titulo': nivelData.titulo,
+                  'artefacto': nivelData.artefacto,
+                });
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: cargando
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Enviar'),
+            ),
+          ],
         ),
       ),
     );
@@ -63,7 +87,7 @@ class ProfileScreen extends ConsumerWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.bordeSutil, width: 0.5)),
             onSelected: (value) {
               if (value == 'salir') context.go('/saliendo');
-              if (value == 'password') _showPasswordDialog(context, colors);
+              if (value == 'password') _showPasswordDialog(context, colors, user.uid);
             },
             itemBuilder: (_) => [
               PopupMenuItem(value: 'password', child: Row(children: [Icon(Icons.vpn_key_outlined, size: 16, color: colors.textoSecundario), const SizedBox(width: 10), Text('Ingresar password', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))])),

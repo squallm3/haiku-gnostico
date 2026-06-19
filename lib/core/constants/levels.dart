@@ -1,3 +1,4 @@
+import 'dart:math';
 // lib/core/constants/levels.dart
 
 class NivelData {
@@ -121,6 +122,15 @@ const List<NivelData> kNiveles = [
   NivelData(nivel: 100, titulo: "Avatar de la Gnosis de Todo", artefacto: "Aleph del Todo", descripcion: "Una pequeña esfera iridiscente de apenas centímetros. Al mirarla con detención, se pueden ver simultáneamente todos los puntos, instantes y misterios del universo entero.", xpAcumulada: 1359049, password: "Instrumentalidad"),
 ];
 
+int calcularXPParaNivel(int nivel) {
+  if (nivel <= 1) return 0;
+  int xp = 0;
+  for (int i = 1; i < nivel; i++) {
+    xp += (1000 * pow(1.05, i - 1)).round();
+  }
+  return xp;
+}
+
 int calcularNivel(int xpTotal) {
   for (int i = kNiveles.length - 1; i >= 0; i--) {
     if (xpTotal >= kNiveles[i].xpAcumulada) return kNiveles[i].nivel;
@@ -140,3 +150,111 @@ NivelData getNivelData(int nivel) {
 }
 
 const int XP_POR_MISION = 777;
+
+// Mapa de passwords por nivel
+const Map<String, int> passwordsNivel = {
+  'gnosis': 1,
+  'choripan': 2,
+  'lcl': 3,
+  'arconte': 4,
+  'manaos': 5,
+  'pleroma': 6,
+  'lilith': 7,
+  'bondi': 8,
+  'demiurgo': 9,
+  'sincro': 10,
+  'quilombo': 11,
+  'nerv': 12,
+  'sofia': 13,
+  'chamuyo': 14,
+  'eon': 15,
+  'bersek': 16,
+  'coto': 17,
+  'abraxas': 18,
+  'morfi': 19,
+  'shinji': 20,
+  'kenoma': 21,
+  'fernet': 22,
+  'asuka': 23,
+  'monada': 24,
+  'laburo': 25,
+  'sachiel': 26,
+  'chispa': 27,
+  'gilda': 28,
+  'ramiel': 29,
+  'truco': 30,
+  'metatron': 31,
+  'alfajor': 32,
+  'misato': 33,
+  'mate': 34,
+  'yaldabaoth': 35,
+  'otaku': 36,
+  'impacto': 37,
+  'gualicho': 38,
+  'rei': 39,
+  'subte': 40,
+  'archon': 41,
+  'sacoa': 42,
+  'kaworu': 43,
+  'rickfort': 44,
+  'barbelo': 45,
+  'salamin': 46,
+  'penpen': 47,
+  'sefirot': 48,
+  'tang': 49,
+  'bolonqui': 50,
+  'merluza': 51,
+  'birra': 52,
+  'leliel': 53,
+  'fachero': 54,
+  'zeruel': 55,
+  'mandanga': 56,
+  'carpincho': 57,
+  'israfel': 58,
+  'atorrante': 59,
+  'sandalphon': 60,
+  'mistica': 61,
+  'gato': 62,
+  'matriz': 63,
+  'monono': 64,
+  'bardero': 65,
+  'sophia': 66,
+  'fulbo': 67,
+  'bardiel': 68,
+  'guita': 69,
+  'sahaquiel': 70,
+  'armisael': 71,
+  'tabris': 72,
+  'peronismo': 73,
+  'entropia': 74,
+  'chorizo': 75,
+  'anunnaki': 76,
+  'diego': 77,
+  'mesias': 78,
+  'patagon': 79,
+  'gauchito': 80,
+  'obelisco': 81,
+  'destino': 82,
+  'victoria': 83,
+  'astral': 84,
+  'gil': 85,
+  'conurbano': 86,
+  'cuarteto': 87,
+  'milanesa': 88,
+  'logos': 89,
+  'monolito': 90,
+  'reclamo': 91,
+  'burocracia': 92,
+  'afip': 93,
+  'vacio': 94,
+  'despertar': 95,
+  'albedrio': 96,
+  'karma': 97,
+  'chorro': 98,
+  'apocalipsis': 99,
+  'instrumentalidad': 100,
+};
+
+int? validarPassword(String input) {
+  return passwordsNivel[input.trim().toLowerCase()];
+}
