@@ -331,6 +331,8 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
         if (_tabController == null) return const SizedBox.shrink();
 
         final selectedSizigiaId = _tabIndex == 0 ? null : sizigias[_tabIndex - 1].id;
+        // Sync selectedSizigiaId upward
+        WidgetsBinding.instance.addPostFrameCallback((_) => widget.onSizigiaSelected(selectedSizigiaId));
 
         return Column(
           children: [
@@ -377,6 +379,23 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                     onSelected: (value) async {
                       if (value.startsWith('orden_')) {
                         setState(() => _ordenActual = value.replaceFirst('orden_', ''));
+                      } else if (value == 'borrar_completadas') {
+                        final sizigiaIds = _tabIndex == 0
+                            ? sizigias.map((s) => s.id).toList()
+                            : [sizigias[_tabIndex - 1].id];
+                        for (final sid in sizigiaIds) {
+                          // Traemos todas y filtramos en cliente para evitar índice
+                          final snap = await FirebaseFirestore.instance
+                              .collection('pleromos').doc(widget.pleromi.id)
+                              .collection('sizigias').doc(sid)
+                              .collection('misiones')
+                              .get();
+                          for (final m in snap.docs) {
+                            if (m.data()['completada'] == true) {
+                              await m.reference.delete();
+                            }
+                          }
+                        }
                       } else if (value == 'eliminar_lista') {
                         if (sizigias.length <= 1) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -424,9 +443,7 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                       PopupMenuItem(value: 'renombrar', child: Text('Cambiar nombre de la lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
                       PopupMenuItem(value: 'eliminar_lista', child: Text('Eliminar lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
                       const PopupMenuDivider(),
-                      PopupMenuItem(value: 'imprimir', child: Text('Imprimir lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
                       PopupMenuItem(value: 'borrar_completadas', child: Text('Borrar todas las tareas completadas', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
-                      PopupMenuItem(value: 'borrar_antiguas', enabled: false, child: Text('Borrar tareas antiguas', style: TextStyle(color: colors.textoMuted, fontSize: 14))),
                     ],
                   ),
                 ],
