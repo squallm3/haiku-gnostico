@@ -599,11 +599,14 @@ class _AllMisionsList extends StatefulWidget {
 class _AllMisionsListState extends State<_AllMisionsList> {
   bool _completadasExpanded = false;
 
+  List<MapEntry<String, MisionModel>>? _localOrder;
+
   Future<void> _onReorderAll(List<MapEntry<String, MisionModel>> pendientes, int oldIndex, int newIndex) async {
     if (newIndex > oldIndex) newIndex--;
     final items = [...pendientes];
     final moved = items.removeAt(oldIndex);
     items.insert(newIndex, moved);
+    setState(() => _localOrder = items);
     for (int i = 0; i < items.length; i++) {
       await FirebaseFirestore.instance
           .collection('pleromos').doc(widget.pleromi.id)
@@ -631,9 +634,13 @@ class _AllMisionsListState extends State<_AllMisionsList> {
         var pendientes = allData.expand((e) => e.value.where((m) => !m.completada).map((m) => MapEntry(e.key, m))).toList();
         final completadas = allData.expand((e) => e.value.where((m) => m.completada).map((m) => MapEntry(e.key, m))).toList();
 
-        // Ordenar por ordenGlobal si está en mi_orden
+        // Ordenar por ordenGlobal si está en mi_orden, usando orden local si disponible
         if (widget.ordenActual == 'mi_orden') {
-          pendientes.sort((a, b) => (a.value.ordenGlobal ?? 999).compareTo(b.value.ordenGlobal ?? 999));
+          if (_localOrder != null) {
+            pendientes = _localOrder!.where((e) => pendientes.any((p) => p.value.id == e.value.id)).toList();
+          } else {
+            pendientes.sort((a, b) => (a.value.ordenGlobal ?? 999).compareTo(b.value.ordenGlobal ?? 999));
+          }
         }
 
         final isReorderable = widget.ordenActual == 'mi_orden';
@@ -646,6 +653,12 @@ class _AllMisionsListState extends State<_AllMisionsList> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 onReorder: (o, n) => _onReorderAll(pendientes, o, n),
+                proxyDecorator: (child, index, animation) => Material(
+                  elevation: 8,
+                  shadowColor: widget.colors.acentoPrimario.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(14),
+                  child: child,
+                ),
                 children: pendientes.map((e) => _MisionCard(
                   key: ValueKey('all_${e.key}_${e.value.id}'),
                   mision: e.value,
@@ -747,7 +760,13 @@ class _MisionGroupState extends State<_MisionGroup> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             onReorder: _onReorder,
-            children: widget.pendientes.map((m) => _MisionCard(
+                proxyDecorator: (child, index, animation) => Material(
+                  elevation: 8,
+                  shadowColor: widget.colors.acentoPrimario.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(14),
+                  child: child,
+                ),
+                children: widget.pendientes.map((m) => _MisionCard(
               key: ValueKey('reorder_${m.id}'),
               mision: m,
               pleromiId: widget.pleromiId,
