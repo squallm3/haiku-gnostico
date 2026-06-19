@@ -36,6 +36,8 @@ class MisionModel {
   final int xpRecompensa;
   final List<String> tags;
   final String userId;
+  final int? orden;
+  final int? ordenGlobal;
 
   MisionModel({
     required this.id,
@@ -46,6 +48,8 @@ class MisionModel {
     required this.xpRecompensa,
     required this.tags,
     required this.userId,
+    this.orden,
+    this.ordenGlobal,
   });
 
   factory MisionModel.fromFirestore(DocumentSnapshot doc) {
@@ -61,6 +65,8 @@ class MisionModel {
       xpRecompensa: d['xpRecompensa'] ?? 777,
       tags: List<String>.from(d['tags'] ?? []),
       userId: d['userId'] ?? '',
+      orden: d['orden'] as int?,
+      ordenGlobal: d['ordenGlobal'] as int?,
     );
   }
 

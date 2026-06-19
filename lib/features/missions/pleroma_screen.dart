@@ -599,9 +599,22 @@ class _AllMisionsList extends StatefulWidget {
 class _AllMisionsListState extends State<_AllMisionsList> {
   bool _completadasExpanded = false;
 
+  Future<void> _onReorderAll(List<MapEntry<String, MisionModel>> pendientes, int oldIndex, int newIndex) async {
+    if (newIndex > oldIndex) newIndex--;
+    final items = [...pendientes];
+    final moved = items.removeAt(oldIndex);
+    items.insert(newIndex, moved);
+    for (int i = 0; i < items.length; i++) {
+      await FirebaseFirestore.instance
+          .collection('pleromos').doc(widget.pleromi.id)
+          .collection('sizigias').doc(items[i].key)
+          .collection('misiones').doc(items[i].value.id)
+          .update({'ordenGlobal': i});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Collect all streams
     final streams = widget.sizigias.map((siz) =>
       FirebaseFirestore.instance
         .collection('pleromos').doc(widget.pleromi.id)
@@ -615,12 +628,36 @@ class _AllMisionsListState extends State<_AllMisionsList> {
       builder: (context, snap) {
         if (!snap.hasData) return const SizedBox.shrink();
         final allData = snap.data!;
-        final pendientes = allData.expand((e) => e.value.where((m) => !m.completada).map((m) => MapEntry(e.key, m))).toList();
+        var pendientes = allData.expand((e) => e.value.where((m) => !m.completada).map((m) => MapEntry(e.key, m))).toList();
         final completadas = allData.expand((e) => e.value.where((m) => m.completada).map((m) => MapEntry(e.key, m))).toList();
+
+        // Ordenar por ordenGlobal si está en mi_orden
+        if (widget.ordenActual == 'mi_orden') {
+          pendientes.sort((a, b) => (a.value.ordenGlobal ?? 999).compareTo(b.value.ordenGlobal ?? 999));
+        }
+
+        final isReorderable = widget.ordenActual == 'mi_orden';
 
         return ListView(
           padding: const EdgeInsets.only(top: 8),
           children: [
+            if (isReorderable)
+              ReorderableListView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                onReorder: (o, n) => _onReorderAll(pendientes, o, n),
+                children: pendientes.map((e) => _MisionCard(
+                  key: ValueKey('all_${e.key}_${e.value.id}'),
+                  mision: e.value,
+                  pleromiId: widget.pleromi.id,
+                  sizigiaId: e.key,
+                  userId: widget.userId,
+                  colors: widget.colors,
+                  onLevelUp: widget.onLevelUp,
+                  showHandle: true,
+                )).toList(),
+              )
+            else
             ...pendientes.map((e) => _MisionCard(
               mision: e.value,
               pleromiId: widget.pleromi.id,
