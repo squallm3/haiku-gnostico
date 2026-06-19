@@ -379,6 +379,37 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                     onSelected: (value) async {
                       if (value.startsWith('orden_')) {
                         setState(() => _ordenActual = value.replaceFirst('orden_', ''));
+                      } else if (value == 'renombrar') {
+                        if (_tabIndex == 0 || _tabIndex > sizigias.length) return;
+                        final siz = sizigias[_tabIndex - 1];
+                        final ctrl = TextEditingController(text: siz['nombre'] ?? '');
+                        await showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            backgroundColor: colors.fondoSuperficie,
+                            title: Text('Cambiar nombre', style: TextStyle(color: colors.textoPrincipal)),
+                            content: TextField(
+                              controller: ctrl,
+                              autofocus: true,
+                              style: TextStyle(color: colors.textoPrincipal),
+                              decoration: InputDecoration(hintText: 'Nombre de la lista', hintStyle: TextStyle(color: colors.textoMuted)),
+                            ),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancelar', style: TextStyle(color: colors.textoMuted))),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  if (ctrl.text.trim().isEmpty) return;
+                                  await FirebaseFirestore.instance
+                                      .collection('pleromos').doc(widget.pleromi.id)
+                                      .collection('sizigias').doc(siz.id)
+                                      .update({'nombre': ctrl.text.trim()});
+                                  if (ctx.mounted) Navigator.pop(ctx);
+                                },
+                                child: const Text('Guardar'),
+                              ),
+                            ],
+                          ),
+                        );
                       } else if (value == 'borrar_completadas') {
                         final sizigiaIds = _tabIndex == 0
                             ? sizigias.map((s) => s.id).toList()
