@@ -430,8 +430,34 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                         }
                       } else if (value == 'eliminar_lista') {
                         if (sizigias.length <= 1) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('No podés eliminar la única lista', style: TextStyle(color: colors.textoPrincipal)), backgroundColor: colors.fondoSuperficie),
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => Dialog(
+                              backgroundColor: Colors.transparent,
+                              child: Container(
+                                padding: const EdgeInsets.all(32),
+                                decoration: BoxDecoration(
+                                  color: colors.fondoSuperficie,
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(color: colors.bordeSutil, width: 0.5),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('🛡️', style: TextStyle(fontSize: 56)),
+                                    const SizedBox(height: 16),
+                                    Text('No podés eliminar', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.textoPrincipal), textAlign: TextAlign.center),
+                                    const SizedBox(height: 8),
+                                    Text('Esta es la única lista que tenés.', style: TextStyle(fontSize: 14, color: colors.textoSecundario), textAlign: TextAlign.center),
+                                    const SizedBox(height: 24),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx),
+                                      child: const Text('Entendido'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           );
                           return;
                         }
