@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../core/themes/app_themes.dart';
 import '../../core/themes/theme_provider.dart';
@@ -86,14 +87,14 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
     if (uid.isEmpty) return;
     final tituloCtrl = TextEditingController();
     bool cargando = false;
-    int xpIndex = 2; // default: Un toco (333)
+    int xpIndex = 1; // default: Un poquito (111)
     final xpOpciones = [
       {'label': 'No lo merezco', 'xp': 0},
       {'label': 'Un poquito', 'xp': 111},
       {'label': 'Un toco', 'xp': 333},
       {'label': 'Una bandaaa', 'xp': 777},
     ];
-    final xpScrollCtrl = FixedExtentScrollController(initialItem: 2);
+    final xpScrollCtrl = FixedExtentScrollController(initialItem: 1);
 
     showModalBottomSheet(
       context: context,
@@ -259,6 +260,34 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
   List<QueryDocumentSnapshot> _sizigias = [];
   int _tabIndex = 0; // 0 = Todas, 1+ = sizigias
   String _ordenActual = 'fecha';
+  final Map<String, String> _ordenPorSizigia = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarOrdenes();
+  }
+
+  Future<void> _cargarOrdenes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys().where((k) => k.startsWith('orden_siz_'));
+    final newMap = <String, String>{};
+    for (final key in keys) {
+      final sizId = key.replaceFirst('orden_siz_', '');
+      newMap[sizId] = prefs.getString(key) ?? 'fecha';
+    }
+    if (mounted) {
+      setState(() {
+        _ordenPorSizigia.addAll(newMap);
+        _ordenActual = _ordenPorSizigia['todas'] ?? 'fecha';
+      });
+    }
+  }
+
+  Future<void> _guardarOrden(String key, String orden) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('orden_siz_$key', orden);
+  }
 
   PopupMenuItem<String> _buildOrdenItem(String value, String label, String actual, AppColors colors) {
     final isSelected = actual == value;
@@ -299,9 +328,14 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
             widget.onAddSizigia();
             newController.animateTo(_tabIndex);
           } else {
-            setState(() => _tabIndex = newController.index);
-            final newSizigiaId = newController.index == 0 ? null
-                : (sizigias.length >= newController.index ? sizigias[newController.index - 1].id : null);
+            final newIndex = newController.index;
+            final newSizigiaId = newIndex == 0 ? null
+                : (sizigias.length >= newIndex ? sizigias[newIndex - 1].id : null);
+            final key = newSizigiaId ?? 'todas';
+            setState(() {
+              _tabIndex = newIndex;
+              _ordenActual = _ordenPorSizigia[key] ?? 'fecha';
+            });
             widget.onSizigiaSelected(newSizigiaId);
           }
         }
@@ -379,7 +413,13 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.bordeSutil, width: 0.5)),
                     onSelected: (value) async {
                       if (value.startsWith('orden_')) {
-                        setState(() => _ordenActual = value.replaceFirst('orden_', ''));
+                        final nuevoOrden = value.replaceFirst('orden_', '');
+                        final key = _tabIndex == 0 ? 'todas' : (sizigias.isNotEmpty && _tabIndex <= sizigias.length ? sizigias[_tabIndex - 1].id : 'todas');
+                        setState(() {
+                          _ordenActual = nuevoOrden;
+                          _ordenPorSizigia[key] = nuevoOrden;
+                        });
+                        _guardarOrden(key, nuevoOrden);
                       } else if (value == 'renombrar') {
                         if (_tabIndex == 0 || _tabIndex > sizigias.length) return;
                         final siz = sizigias[_tabIndex - 1];
