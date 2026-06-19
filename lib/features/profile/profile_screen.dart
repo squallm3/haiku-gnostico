@@ -139,7 +139,47 @@ class ProfileScreen extends ConsumerWidget {
                             Text('Nivel $nivel', style: TextStyle(fontSize: 12, color: colors.textoMuted)),
                             Text(titulo, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textoPrincipal), maxLines: 2),
                             const SizedBox(height: 4),
-                            Text(artefacto, style: TextStyle(fontSize: 13, color: colors.textoSecundario)),
+                            GestureDetector(
+                              onTap: () {
+                                final desc = getDescripcionArtefacto(nivel);
+                                if (desc == null) return;
+                                showDialog(
+                                  context: context,
+                                  builder: (ctx) => Dialog(
+                                    backgroundColor: Colors.transparent,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(24),
+                                      decoration: BoxDecoration(
+                                        color: colors.fondoSuperficie,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(color: colors.bordeSutil, width: 0.5),
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(artefacto, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textoPrincipal)),
+                                          const SizedBox(height: 12),
+                                          Text(desc, style: TextStyle(fontSize: 13, color: colors.textoSecundario, height: 1.5)),
+                                          const SizedBox(height: 16),
+                                          Align(
+                                            alignment: Alignment.centerRight,
+                                            child: TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cerrar', style: TextStyle(color: colors.acentoPrimario))),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Row(
+                                children: [
+                                  Text(artefacto, style: TextStyle(fontSize: 13, color: colors.textoSecundario)),
+                                  const SizedBox(width: 4),
+                                  Icon(Icons.info_outline, size: 12, color: colors.textoMuted),
+                                ],
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             // Boton Comprar Equipamiento
                             OutlinedButton(
