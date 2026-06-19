@@ -41,11 +41,11 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
       children: [
         Scaffold(
           backgroundColor: colors.fondoPrincipal,
-          floatingActionButton: FloatingActionButton(
+          floatingActionButton: _selectedSizigiaId != null ? FloatingActionButton(
             onPressed: () => _showAddMision(context, colors, uid, sizigiaId: _selectedSizigiaId),
             backgroundColor: colors.acentoPrimario,
             child: const Icon(Icons.add, color: Colors.white),
-          ),
+          ) : null,
           appBar: AppBar(
             title: Text('Misiones', style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
             actions: const [],
@@ -58,6 +58,10 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
                 return _EmptyState(colors: colors, onAdd: () => _showAddMision(context, colors, uid));
               }
               final pleromi = pleromos.first;
+              // Initialize selectedSizigiaId with first sizigia if still null
+              if (_selectedSizigiaId == null && pleromos.isNotEmpty) {
+                // stays null = Todas view, FAB hidden - correct behavior
+              }
               return _MisionesConTabs(
                 pleromi: pleromi,
                 colors: colors,
@@ -331,9 +335,6 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
         if (_tabController == null) return const SizedBox.shrink();
 
         final selectedSizigiaId = _tabIndex == 0 ? null : sizigias[_tabIndex - 1].id;
-        // Sync selectedSizigiaId upward
-        WidgetsBinding.instance.addPostFrameCallback((_) => widget.onSizigiaSelected(selectedSizigiaId));
-
         return Column(
           children: [
             // TabBar estilo Material
@@ -524,6 +525,7 @@ class _MisionList extends StatelessWidget {
         colors: colors,
         userId: userId,
         onLevelUp: onLevelUp,
+        ordenActual: ordenActual,
       );
     }
 
@@ -586,8 +588,9 @@ class _AllMisionsList extends StatefulWidget {
   final AppColors colors;
   final String userId;
   final Function(int) onLevelUp;
+  final String ordenActual;
 
-  const _AllMisionsList({required this.pleromi, required this.sizigias, required this.colors, required this.userId, required this.onLevelUp});
+  const _AllMisionsList({required this.pleromi, required this.sizigias, required this.colors, required this.userId, required this.onLevelUp, this.ordenActual = 'fecha'});
 
   @override
   State<_AllMisionsList> createState() => _AllMisionsListState();
