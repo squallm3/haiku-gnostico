@@ -489,6 +489,7 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                 onLevelUp: widget.onLevelUp,
                 selectedSizigiaId: selectedSizigiaId,
                 sizigias: sizigias,
+                ordenActual: _ordenActual,
               ),
             ),
           ],
@@ -505,8 +506,9 @@ class _MisionList extends StatelessWidget {
   final Function(int) onLevelUp;
   final String? selectedSizigiaId;
   final List<QueryDocumentSnapshot> sizigias;
+  final String ordenActual;
 
-  const _MisionList({required this.pleromi, required this.colors, required this.userId, required this.onLevelUp, required this.selectedSizigiaId, required this.sizigias});
+  const _MisionList({required this.pleromi, required this.colors, required this.userId, required this.onLevelUp, required this.selectedSizigiaId, required this.sizigias, this.ordenActual = 'fecha'});
 
   @override
   Widget build(BuildContext context) {
@@ -545,6 +547,7 @@ class _MisionList extends StatelessWidget {
             userId: userId,
             colors: colors,
             onLevelUp: onLevelUp,
+            ordenActual: ordenActual,
           );
         },
       )).toList(),
@@ -668,8 +671,9 @@ class _MisionGroup extends StatefulWidget {
   final String userId;
   final AppColors colors;
   final Function(int) onLevelUp;
+  final String ordenActual;
 
-  const _MisionGroup({required this.pendientes, required this.completadas, required this.pleromiId, required this.sizigiaId, required this.userId, required this.colors, required this.onLevelUp});
+  const _MisionGroup({required this.pendientes, required this.completadas, required this.pleromiId, required this.sizigiaId, required this.userId, required this.colors, required this.onLevelUp, this.ordenActual = 'fecha'});
 
   @override
   State<_MisionGroup> createState() => _MisionGroupState();
@@ -678,10 +682,43 @@ class _MisionGroup extends StatefulWidget {
 class _MisionGroupState extends State<_MisionGroup> {
   bool _completadasExpanded = false;
 
+  Future<void> _onReorder(int oldIndex, int newIndex) async {
+    if (newIndex > oldIndex) newIndex--;
+    final items = [...widget.pendientes];
+    final moved = items.removeAt(oldIndex);
+    items.insert(newIndex, moved);
+    // Update orden field in Firestore
+    for (int i = 0; i < items.length; i++) {
+      await FirebaseFirestore.instance
+          .collection('pleromos').doc(widget.pleromiId)
+          .collection('sizigias').doc(widget.sizigiaId)
+          .collection('misiones').doc(items[i].id)
+          .update({'orden': i});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isReorderable = widget.ordenActual == 'mi_orden';
     return Column(
       children: [
+        if (isReorderable)
+          ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            onReorder: _onReorder,
+            children: widget.pendientes.map((m) => _MisionCard(
+              key: ValueKey('reorder_${m.id}'),
+              mision: m,
+              pleromiId: widget.pleromiId,
+              sizigiaId: widget.sizigiaId,
+              userId: widget.userId,
+              colors: widget.colors,
+              onLevelUp: widget.onLevelUp,
+              showHandle: true,
+            )).toList(),
+          )
+        else
         ...widget.pendientes.map((m) => _MisionCard(
           mision: m,
           pleromiId: widget.pleromiId,
@@ -739,7 +776,8 @@ class _MisionCard extends ConsumerWidget {
   final String userId;
   final AppColors colors;
   final Function(int) onLevelUp;
-  const _MisionCard({required this.mision, required this.pleromiId, required this.sizigiaId, required this.userId, required this.colors, required this.onLevelUp});
+  final bool showHandle;
+  const _MisionCard({super.key, required this.mision, required this.pleromiId, required this.sizigiaId, required this.userId, required this.colors, required this.onLevelUp, this.showHandle = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -793,6 +831,11 @@ class _MisionCard extends ConsumerWidget {
               Expanded(
                 child: Row(
                   children: [
+                    if (showHandle)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Icon(Icons.drag_handle, color: colors.textoMuted, size: 18),
+                      ),
                     Expanded(
                       child: Text(
                         mision.titulo,
