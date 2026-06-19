@@ -537,6 +537,7 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                       _buildOrdenItem('fecha', 'Fecha', _ordenActual, colors),
                       _buildOrdenItem('fecha_limite', 'Fecha límite', _ordenActual, colors),
                       _buildOrdenItem('titulo', 'Título', _ordenActual, colors),
+                      _buildOrdenItem('experiencia', 'Experiencia', _ordenActual, colors),
                       const PopupMenuDivider(),
                       PopupMenuItem(value: 'renombrar', child: Text('Cambiar nombre de la lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
                       PopupMenuItem(value: 'eliminar_lista', child: Text('Eliminar lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
@@ -707,6 +708,8 @@ class _AllMisionsListState extends State<_AllMisionsList> {
           } else {
             pendientes.sort((a, b) => (a.value.ordenGlobal ?? 999).compareTo(b.value.ordenGlobal ?? 999));
           }
+        } else if (widget.ordenActual == 'experiencia') {
+          pendientes.sort((a, b) => b.value.xpRecompensa.compareTo(a.value.xpRecompensa));
         }
 
         final isReorderable = widget.ordenActual == 'mi_orden';
@@ -819,6 +822,14 @@ class _MisionGroupState extends State<_MisionGroup> {
   @override
   Widget build(BuildContext context) {
     final isReorderable = widget.ordenActual == 'mi_orden';
+    var pendientes = [...widget.pendientes];
+    if (widget.ordenActual == 'experiencia') {
+      pendientes.sort((a, b) => b.xpRecompensa.compareTo(a.xpRecompensa));
+    } else if (widget.ordenActual == 'titulo') {
+      pendientes.sort((a, b) => a.titulo.compareTo(b.titulo));
+    } else if (widget.ordenActual == 'mi_orden') {
+      pendientes.sort((a, b) => (a.orden ?? 999).compareTo(b.orden ?? 999));
+    }
     return Column(
       children: [
         if (isReorderable)
@@ -832,7 +843,7 @@ class _MisionGroupState extends State<_MisionGroup> {
                   borderRadius: BorderRadius.circular(14),
                   child: child,
                 ),
-                children: widget.pendientes.map((m) => _MisionCard(
+                children: pendientes.map((m) => _MisionCard(
               key: ValueKey('reorder_${m.id}'),
               mision: m,
               pleromiId: widget.pleromiId,
@@ -844,7 +855,7 @@ class _MisionGroupState extends State<_MisionGroup> {
             )).toList(),
           )
         else
-        ...widget.pendientes.map((m) => _MisionCard(
+        ...pendientes.map((m) => _MisionCard(
           mision: m,
           pleromiId: widget.pleromiId,
           sizigiaId: widget.sizigiaId,
