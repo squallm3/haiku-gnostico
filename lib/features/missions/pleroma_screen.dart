@@ -664,14 +664,14 @@ class _AllMisionsList extends StatefulWidget {
 class _AllMisionsListState extends State<_AllMisionsList> {
   bool _completadasExpanded = false;
 
-  List<MapEntry<String, MisionModel>>? _localOrder;
+  List<MapEntry<String, MisionModel>>? _localOrderAll;
 
   Future<void> _onReorderAll(List<MapEntry<String, MisionModel>> pendientes, int oldIndex, int newIndex) async {
     if (newIndex > oldIndex) newIndex--;
-    final items = [...pendientes];
+    final items = [...(_localOrderAll ?? pendientes)];
     final moved = items.removeAt(oldIndex);
     items.insert(newIndex, moved);
-    setState(() => _localOrder = items);
+    setState(() => _localOrderAll = items);
     for (int i = 0; i < items.length; i++) {
       await FirebaseFirestore.instance
           .collection('pleromos').doc(widget.pleromi.id)
@@ -701,8 +701,8 @@ class _AllMisionsListState extends State<_AllMisionsList> {
 
         // Ordenar por ordenGlobal si está en mi_orden, usando orden local si disponible
         if (widget.ordenActual == 'mi_orden') {
-          if (_localOrder != null) {
-            pendientes = _localOrder!.where((e) => pendientes.any((p) => p.value.id == e.value.id)).toList();
+          if (_localOrderAll != null) {
+            pendientes = _localOrderAll!;
           } else {
             pendientes.sort((a, b) => (a.value.ordenGlobal ?? 999).compareTo(b.value.ordenGlobal ?? 999));
           }
@@ -802,17 +802,29 @@ class _MisionGroup extends StatefulWidget {
 class _MisionGroupState extends State<_MisionGroup> {
   bool _completadasExpanded = false;
 
+  List<String>? _localOrderIds;
+
   Future<void> _onReorder(int oldIndex, int newIndex) async {
     if (newIndex > oldIndex) newIndex--;
-    final items = [...widget.pendientes];
-    final moved = items.removeAt(oldIndex);
-    items.insert(newIndex, moved);
-    // Update orden field in Firestore
-    for (int i = 0; i < items.length; i++) {
+    final base = [...widget.pendientes];
+    if (_localOrderIds != null) {
+      base.sort((a, b) {
+        final ia = _localOrderIds!.indexOf(a.id);
+        final ib = _localOrderIds!.indexOf(b.id);
+        return (ia == -1 ? 999 : ia).compareTo(ib == -1 ? 999 : ib);
+      });
+    } else {
+      base.sort((a, b) => (a.orden ?? 999).compareTo(b.orden ?? 999));
+    }
+    final sorted = base;
+    final moved = sorted.removeAt(oldIndex);
+    sorted.insert(newIndex, moved);
+    setState(() => _localOrderIds = sorted.map((m) => m.id).toList());
+    for (int i = 0; i < sorted.length; i++) {
       await FirebaseFirestore.instance
           .collection('pleromos').doc(widget.pleromiId)
           .collection('sizigias').doc(widget.sizigiaId)
-          .collection('misiones').doc(items[i].id)
+          .collection('misiones').doc(sorted[i].id)
           .update({'orden': i});
     }
   }
@@ -820,13 +832,23 @@ class _MisionGroupState extends State<_MisionGroup> {
   @override
   Widget build(BuildContext context) {
     final isReorderable = widget.ordenActual == 'mi_orden';
-    var pendientes = [...widget.pendientes];
-    if (widget.ordenActual == 'experiencia') {
-      pendientes.sort((a, b) => b.xpRecompensa.compareTo(a.xpRecompensa));
+    List<MisionModel> pendientes;
+    if (widget.ordenActual == 'mi_orden') {
+      if (_localOrderIds != null) {
+        pendientes = [...widget.pendientes]..sort((a, b) {
+          final ia = _localOrderIds!.indexOf(a.id);
+          final ib = _localOrderIds!.indexOf(b.id);
+          return (ia == -1 ? 999 : ia).compareTo(ib == -1 ? 999 : ib);
+        });
+      } else {
+        pendientes = [...widget.pendientes]..sort((a, b) => (a.orden ?? 999).compareTo(b.orden ?? 999));
+      }
+    } else if (widget.ordenActual == 'experiencia') {
+      pendientes = [...widget.pendientes]..sort((a, b) => b.xpRecompensa.compareTo(a.xpRecompensa));
     } else if (widget.ordenActual == 'titulo') {
-      pendientes.sort((a, b) => a.titulo.compareTo(b.titulo));
-    } else if (widget.ordenActual == 'mi_orden') {
-      pendientes.sort((a, b) => (a.orden ?? 999).compareTo(b.orden ?? 999));
+      pendientes = [...widget.pendientes]..sort((a, b) => a.titulo.compareTo(b.titulo));
+    } else {
+      pendientes = [...widget.pendientes];
     }
     return Column(
       children: [
