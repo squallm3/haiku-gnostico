@@ -1,30 +1,24 @@
 // lib/core/models/mission_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class PleromiModel {
+class SubtareaModel {
   final String id;
-  final String nombre;
-  final String userId;
+  final String titulo;
+  final bool completada;
 
-  PleromiModel({required this.id, required this.nombre, required this.userId});
+  SubtareaModel({required this.id, required this.titulo, required this.completada});
 
-  factory PleromiModel.fromFirestore(DocumentSnapshot doc) {
-    final d = doc.data() as Map<String, dynamic>;
-    return PleromiModel(id: doc.id, nombre: d['nombre'] ?? '', userId: d['userId'] ?? '');
-  }
-}
+  factory SubtareaModel.fromMap(Map<String, dynamic> map) => SubtareaModel(
+    id: map['id'] ?? '',
+    titulo: map['titulo'] ?? '',
+    completada: map['completada'] ?? false,
+  );
 
-class SizigiaModel {
-  final String id;
-  final String nombre;
-  final String? slackChannel;
-
-  SizigiaModel({required this.id, required this.nombre, this.slackChannel});
-
-  factory SizigiaModel.fromFirestore(DocumentSnapshot doc) {
-    final d = doc.data() as Map<String, dynamic>;
-    return SizigiaModel(id: doc.id, nombre: d['nombre'] ?? '', slackChannel: d['slackChannel']);
-  }
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'titulo': titulo,
+    'completada': completada,
+  };
 }
 
 class MisionModel {
@@ -38,6 +32,14 @@ class MisionModel {
   final String userId;
   final int? orden;
   final int? ordenGlobal;
+  // Nuevos campos
+  final String detalle;
+  final DateTime? fecha;
+  final bool horaActivada;
+  final String? hora; // formato "HH:mm"
+  final String? repeticion; // 'diario', 'semanal', 'mensual', 'anual'
+  final String? finalizacion; // 'nunca', 'fecha:YYYY-MM-DD', 'despues:N'
+  final List<SubtareaModel> subtareas;
 
   MisionModel({
     required this.id,
@@ -50,6 +52,13 @@ class MisionModel {
     required this.userId,
     this.orden,
     this.ordenGlobal,
+    this.detalle = '',
+    this.fecha,
+    this.horaActivada = false,
+    this.hora,
+    this.repeticion,
+    this.finalizacion,
+    this.subtareas = const [],
   });
 
   factory MisionModel.fromFirestore(DocumentSnapshot doc) {
@@ -67,6 +76,15 @@ class MisionModel {
       userId: d['userId'] ?? '',
       orden: d['orden'] as int?,
       ordenGlobal: d['ordenGlobal'] as int?,
+      detalle: d['detalle'] ?? '',
+      fecha: d['fecha'] != null ? (d['fecha'] as Timestamp).toDate() : null,
+      horaActivada: d['horaActivada'] ?? false,
+      hora: d['hora'] as String?,
+      repeticion: d['repeticion'] as String?,
+      finalizacion: d['finalizacion'] as String?,
+      subtareas: (d['subtareas'] as List<dynamic>? ?? [])
+          .map((s) => SubtareaModel.fromMap(s as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -78,5 +96,46 @@ class MisionModel {
     'xpRecompensa': xpRecompensa,
     'tags': tags,
     'userId': userId,
+    'orden': orden,
+    'ordenGlobal': ordenGlobal,
+    'detalle': detalle,
+    'fecha': fecha != null ? Timestamp.fromDate(fecha!) : null,
+    'horaActivada': horaActivada,
+    'hora': hora,
+    'repeticion': repeticion,
+    'finalizacion': finalizacion,
+    'subtareas': subtareas.map((s) => s.toMap()).toList(),
   };
+}
+
+class PleromiModel {
+  final String id;
+  final String nombre;
+  final String userId;
+
+  PleromiModel({required this.id, required this.nombre, required this.userId});
+
+  factory PleromiModel.fromFirestore(DocumentSnapshot doc) {
+    final d = doc.data() as Map<String, dynamic>;
+    return PleromiModel(
+      id: doc.id,
+      nombre: d['nombre'] ?? '',
+      userId: d['userId'] ?? '',
+    );
+  }
+}
+
+class SizigiaModel {
+  final String id;
+  final String nombre;
+
+  SizigiaModel({required this.id, required this.nombre});
+
+  factory SizigiaModel.fromFirestore(DocumentSnapshot doc) {
+    final d = doc.data() as Map<String, dynamic>;
+    return SizigiaModel(
+      id: doc.id,
+      nombre: d['nombre'] ?? '',
+    );
+  }
 }
