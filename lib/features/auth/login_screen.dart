@@ -124,39 +124,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 label: const Text('Entrar con Google', style: TextStyle(fontSize: 16)),
                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
               ),
-              const SizedBox(height: 32),
-              Text('Elegí tu modo visual:', textAlign: TextAlign.center, style: TextStyle(color: colors.textoMuted, fontSize: 12)),
-              const SizedBox(height: 12),
-              Row(
-                children: AppTema.values.map((t) {
-                  final isSelected = tema == t;
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: GestureDetector(
-                        onTap: () => ref.read(themeProvider.notifier).setTema(t),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: isSelected ? colors.acentoPrimario : colors.bordeSutil, width: isSelected ? 1.5 : 0.5),
-                            borderRadius: BorderRadius.circular(12),
-                            color: isSelected ? colors.acentoPrimario.withValues(alpha: 0.15) : Colors.transparent,
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(t.emoji, style: const TextStyle(fontSize: 20)),
-                              const SizedBox(height: 4),
-                              Text(t.nombre, textAlign: TextAlign.center, style: TextStyle(fontSize: 9, color: isSelected ? colors.acentoPrimario : colors.textoMuted)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
+
               const SizedBox(height: 24),
             ],
               ),

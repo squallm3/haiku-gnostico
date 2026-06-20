@@ -309,9 +309,7 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
   }
 
   Color _tabBarColor(AppColors colors) {
-    if (colors.fondoHeader == const Color(0xFF1A0000)) return const Color(0xFF3D1400); // Caos - marron
-    if (colors.fondoHeader == const Color(0xFF003366)) return const Color(0xFF002244); // Conurbano
-    return const Color(0xFF110626); // Gnostico
+    return const Color(0xFF110626); // Gnóstico
   }
 
   void _rebuildTabs(List<QueryDocumentSnapshot> sizigias) {

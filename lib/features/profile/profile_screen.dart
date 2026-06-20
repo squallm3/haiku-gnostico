@@ -260,49 +260,7 @@ class ProfileScreen extends ConsumerWidget {
                 // Acordeon de niveles desbloqueados
                 _NivelesAcordeon(nivel: nivel, colors: colors),
 
-                // Selector de tema
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: colors.fondoSuperficie, borderRadius: BorderRadius.circular(20), border: Border.all(color: colors.bordeSutil, width: 0.5)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Modo visual', style: TextStyle(fontSize: 12, color: colors.textoMuted, fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: AppTema.values.map((t) {
-                          final isSelected = tema == t;
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: GestureDetector(
-                                onTap: () => ref.read(themeProvider.notifier).setTema(t),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: isSelected ? colors.acentoPrimario : colors.bordeSutil, width: isSelected ? 1.5 : 0.5),
-                                    borderRadius: BorderRadius.circular(12),
-                                    color: isSelected ? colors.acentoPrimario.withValues(alpha: 0.15) : Colors.transparent,
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(t.emoji, style: const TextStyle(fontSize: 20)),
-                                      const SizedBox(height: 4),
-                                      Text(t.nombre, textAlign: TextAlign.center, style: TextStyle(fontSize: 9, color: isSelected ? colors.acentoPrimario : colors.textoMuted)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
+
 
                 // Resetear perfil temporal
                 OutlinedButton.icon(
