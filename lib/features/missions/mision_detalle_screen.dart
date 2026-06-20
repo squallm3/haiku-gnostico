@@ -139,6 +139,14 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
           ),
           Divider(color: colors.bordeSutil, height: 32),
 
+          // XP con ruleta
+          _XPRuleta(
+            xpActual: widget.mision.xpRecompensa,
+            colors: colors,
+            onChanged: (xp) => _autoGuardar({'xpRecompensa': xp}),
+          ),
+          Divider(color: colors.bordeSutil, height: 32),
+
           // Placeholders para los campos que vienen
           _PlaceholderRow(icon: Icons.calendar_today_outlined, label: 'Agregar fecha/hora', colors: colors),
           Divider(color: colors.bordeSutil, height: 1),
@@ -167,6 +175,84 @@ class _PlaceholderRow extends StatelessWidget {
           Text(label, style: TextStyle(fontSize: 14, color: colors.textoMuted)),
         ],
       ),
+    );
+  }
+}
+
+class _XPRuleta extends StatefulWidget {
+  final int xpActual;
+  final AppColors colors;
+  final Function(int) onChanged;
+  const _XPRuleta({required this.xpActual, required this.colors, required this.onChanged});
+
+  @override
+  State<_XPRuleta> createState() => _XPRuletaState();
+}
+
+class _XPRuletaState extends State<_XPRuleta> {
+  final xpOpciones = const [
+    {'label': 'No lo merezco', 'xp': 0},
+    {'label': 'Un poquito', 'xp': 111},
+    {'label': 'Un toco', 'xp': 333},
+    {'label': 'Una bandaaa', 'xp': 777},
+  ];
+  late int _selectedIndex;
+  late FixedExtentScrollController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = xpOpciones.indexWhere((o) => o['xp'] == widget.xpActual);
+    if (_selectedIndex == -1) _selectedIndex = 1;
+    _ctrl = FixedExtentScrollController(initialItem: _selectedIndex);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.colors;
+    return Row(
+      children: [
+        Icon(Icons.auto_awesome, color: colors.textoMuted, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: SizedBox(
+            height: 80,
+            child: ListWheelScrollView.useDelegate(
+              controller: _ctrl,
+              itemExtent: 30,
+              perspective: 0.003,
+              diameterRatio: 1.6,
+              physics: const FixedExtentScrollPhysics(),
+              onSelectedItemChanged: (i) {
+                setState(() => _selectedIndex = i);
+                widget.onChanged(xpOpciones[i]['xp'] as int);
+              },
+              childDelegate: ListWheelChildBuilderDelegate(
+                childCount: xpOpciones.length,
+                builder: (ctx, i) {
+                  final isSelected = i == _selectedIndex;
+                  return Center(
+                    child: Text(
+                      '${xpOpciones[i]['label']}  ${xpOpciones[i]['xp'] == 0 ? '' : '+${xpOpciones[i]['xp']} XP'}',
+                      style: TextStyle(
+                        fontSize: isSelected ? 14 : 11,
+                        fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                        color: isSelected ? colors.acentoSecundario : colors.textoMuted,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
