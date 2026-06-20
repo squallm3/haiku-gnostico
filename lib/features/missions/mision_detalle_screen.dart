@@ -7,6 +7,9 @@ import '../../core/themes/theme_provider.dart';
 import '../../core/models/mission_model.dart';
 import '../../services/firestore_service.dart';
 
+const _kColor = Color(0xFFf0e0ff);
+const _kViolet = Color(0xFFcc88ff);
+
 class MisionDetalleScreen extends ConsumerStatefulWidget {
   final MisionModel mision;
   final String pleromiId;
@@ -28,9 +31,21 @@ class MisionDetalleScreen extends ConsumerStatefulWidget {
 class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
   late TextEditingController _tituloCtrl;
   late TextEditingController _detalleCtrl;
+  late int _xpIndex;
   DateTime? _fecha;
-  bool _horaActivada = false;
   TimeOfDay? _hora;
+  bool _horaActivada = false;
+  String? _repeticion;
+  String? _finalizacion;
+
+  final _xpOpciones = const [
+    {'label': 'No lo merezco', 'xp': 0},
+    {'label': 'Un poquito', 'xp': 111},
+    {'label': 'Un toco', 'xp': 333},
+    {'label': 'Una bandaaa', 'xp': 777},
+  ];
+
+  late FixedExtentScrollController _xpCtrl;
 
   @override
   void initState() {
@@ -39,16 +54,22 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
     _detalleCtrl = TextEditingController(text: widget.mision.detalle);
     _fecha = widget.mision.fecha;
     _horaActivada = widget.mision.horaActivada;
+    _repeticion = widget.mision.repeticion;
+    _finalizacion = widget.mision.finalizacion;
     if (widget.mision.hora != null) {
       final parts = widget.mision.hora!.split(':');
       _hora = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
     }
+    _xpIndex = _xpOpciones.indexWhere((o) => o['xp'] == widget.mision.xpRecompensa);
+    if (_xpIndex == -1) _xpIndex = 1;
+    _xpCtrl = FixedExtentScrollController(initialItem: _xpIndex);
   }
 
   @override
   void dispose() {
     _tituloCtrl.dispose();
     _detalleCtrl.dispose();
+    _xpCtrl.dispose();
     super.dispose();
   }
 
@@ -67,10 +88,10 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.fondoSuperficie,
-        title: Text('Eliminar misión', style: TextStyle(color: colors.textoPrincipal)),
-        content: Text('¿Eliminás "${widget.mision.titulo}"?', style: TextStyle(color: colors.textoSecundario)),
+        title: Text('Eliminar misión', style: const TextStyle(color: _kColor)),
+        content: Text('¿Eliminás "${widget.mision.titulo}"?', style: const TextStyle(color: _kColor)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancelar', style: TextStyle(color: colors.textoMuted))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar', style: TextStyle(color: _kViolet))),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar', style: TextStyle(color: Colors.redAccent))),
         ],
       ),
@@ -85,6 +106,231 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
     }
   }
 
+  String _formatFecha(DateTime d) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final fecha = DateTime(d.year, d.month, d.day);
+    if (fecha == today) return 'Hoy';
+    if (fecha == tomorrow) return 'Mañana';
+    return '${d.day}/${d.month}/${d.year}';
+  }
+
+  String _formatHora(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  String get _repeticionLabel {
+    switch (_repeticion) {
+      case 'diario': return 'Se repite diariamente';
+      case 'semanal': return 'Se repite semanalmente';
+      case 'mensual': return 'Se repite mensualmente';
+      case 'anual': return 'Se repite anualmente';
+      default: return 'Repetir';
+    }
+  }
+
+  Future<void> _showFechaDialog() async {
+    final colors = AppColors.fromTema(ref.read(themeProvider));
+    DateTime tempFecha = _fecha ?? DateTime.now();
+    TimeOfDay? tempHora = _hora;
+    bool tempHoraActivada = _horaActivada;
+    String? tempRep = _repeticion;
+    String? tempFin = _finalizacion;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => Dialog(
+          backgroundColor: colors.fondoSuperficie,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Calendar
+              Theme(
+                data: ThemeData.dark().copyWith(
+                  colorScheme: ColorScheme.dark(primary: colors.acentoPrimario),
+                ),
+                child: CalendarDatePicker(
+                  initialDate: tempFecha,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2030),
+                  onDateChanged: (d) => setS(() => tempFecha = d),
+                ),
+              ),
+              Divider(color: colors.bordeSutil, height: 1),
+              // Establecer hora
+              ListTile(
+                leading: Icon(Icons.access_time, color: tempHoraActivada ? colors.acentoPrimario : _kColor),
+                title: Text(
+                  tempHoraActivada && tempHora != null ? _formatHora(tempHora!) : 'Establecer hora',
+                  style: const TextStyle(color: _kColor, fontSize: 14),
+                ),
+                trailing: tempHoraActivada
+                    ? GestureDetector(
+                        onTap: () => setS(() { tempHora = null; tempHoraActivada = false; }),
+                        child: const Icon(Icons.close, color: _kViolet, size: 16),
+                      )
+                    : null,
+                onTap: () async {
+                  final picked = await showTimePicker(
+                    context: ctx,
+                    initialTime: tempHora ?? TimeOfDay.now(),
+                    builder: (ctx2, child) => Theme(
+                      data: ThemeData.dark().copyWith(colorScheme: ColorScheme.dark(primary: colors.acentoPrimario)),
+                      child: child!,
+                    ),
+                  );
+                  if (picked != null) setS(() { tempHora = picked; tempHoraActivada = true; });
+                },
+              ),
+              Divider(color: colors.bordeSutil, height: 1),
+              // Repetir
+              ListTile(
+                leading: Icon(Icons.repeat, color: tempRep != null ? colors.acentoPrimario : _kColor),
+                title: Text(
+                  tempRep != null ? _repeticionLabel : 'Repetir',
+                  style: const TextStyle(color: _kColor, fontSize: 14),
+                ),
+                trailing: tempRep != null
+                    ? GestureDetector(
+                        onTap: () => setS(() { tempRep = null; tempFin = null; }),
+                        child: const Icon(Icons.close, color: _kViolet, size: 16),
+                      )
+                    : null,
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _showRepeticionDialog(colors, tempRep, tempFin, (rep, fin) {
+                    tempRep = rep; tempFin = fin;
+                  });
+                  if (mounted) setState(() { _repeticion = tempRep; _finalizacion = tempFin; });
+                  await _autoGuardar({'repeticion': tempRep, 'finalizacion': tempFin});
+                  return;
+                },
+              ),
+              Divider(color: colors.bordeSutil, height: 1),
+              // Acciones
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancelar', style: TextStyle(color: _kViolet)),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        setState(() {
+                          _fecha = tempFecha;
+                          _hora = tempHora;
+                          _horaActivada = tempHoraActivada;
+                          _repeticion = tempRep;
+                          _finalizacion = tempFin;
+                        });
+                        await _autoGuardar({
+                          'fecha': Timestamp.fromDate(tempFecha),
+                          'hora': tempHoraActivada && tempHora != null
+                              ? '${tempHora!.hour.toString().padLeft(2,'0')}:${tempHora!.minute.toString().padLeft(2,'0')}'
+                              : null,
+                          'horaActivada': tempHoraActivada,
+                          'repeticion': tempRep,
+                          'finalizacion': tempFin,
+                        });
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      },
+                      child: const Text('Listo'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showRepeticionDialog(AppColors colors, String? repActual, String? finActual, Function(String?, String?) onResult) async {
+    final opciones = ['diario', 'semanal', 'mensual', 'anual'];
+    final labels = ['Diariamente', 'Semanalmente', 'Mensualmente', 'Anualmente'];
+    String? selRep = repActual;
+    String selFin = finActual ?? 'nunca';
+    final nVecesCtrl = TextEditingController(
+      text: finActual?.startsWith('despues:') == true ? finActual!.split(':')[1] : '10',
+    );
+    DateTime? fechaFin = finActual?.startsWith('fecha:') == true
+        ? DateTime.parse(finActual!.split(':')[1]) : null;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          backgroundColor: colors.fondoSuperficie,
+          title: const Text('Repetir', style: TextStyle(color: _kColor)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Frecuencia', style: TextStyle(fontSize: 12, color: _kViolet)),
+                const SizedBox(height: 8),
+                ...List.generate(opciones.length, (i) => RadioListTile<String>(
+                  dense: true,
+                  title: Text(labels[i], style: const TextStyle(color: _kColor, fontSize: 14)),
+                  value: opciones[i],
+                  groupValue: selRep,
+                  activeColor: colors.acentoPrimario,
+                  onChanged: (v) => setS(() => selRep = v),
+                )),
+                const SizedBox(height: 12),
+                const Text('Finaliza', style: TextStyle(fontSize: 12, color: _kViolet)),
+                RadioListTile<String>(dense: true, title: const Text('Nunca', style: TextStyle(color: _kColor, fontSize: 14)), value: 'nunca', groupValue: selFin, activeColor: colors.acentoPrimario, onChanged: (v) => setS(() => selFin = v!)),
+                RadioListTile<String>(
+                  dense: true,
+                  title: Row(children: [
+                    const Text('El ', style: TextStyle(color: _kColor, fontSize: 14)),
+                    GestureDetector(
+                      onTap: () async {
+                        final p = await showDatePicker(context: context, initialDate: fechaFin ?? DateTime.now(), firstDate: DateTime.now(), lastDate: DateTime(2030));
+                        if (p != null) setS(() { fechaFin = p; selFin = 'fecha'; });
+                      },
+                      child: Text(fechaFin != null ? '${fechaFin!.day}/${fechaFin!.month}/${fechaFin!.year}' : 'elegir', style: const TextStyle(color: _kViolet, fontSize: 14, decoration: TextDecoration.underline)),
+                    ),
+                  ]),
+                  value: 'fecha', groupValue: selFin, activeColor: colors.acentoPrimario, onChanged: (v) => setS(() => selFin = v!),
+                ),
+                RadioListTile<String>(
+                  dense: true,
+                  title: Row(children: [
+                    const Text('Después de ', style: TextStyle(color: _kColor, fontSize: 14)),
+                    SizedBox(width: 48, child: TextField(controller: nVecesCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: _kColor, fontSize: 14), decoration: InputDecoration(isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: colors.bordeSutil))))),
+                    const Text(' veces', style: TextStyle(color: _kColor, fontSize: 14)),
+                  ]),
+                  value: 'despues', groupValue: selFin, activeColor: colors.acentoPrimario, onChanged: (v) => setS(() => selFin = v!),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () { onResult(null, null); Navigator.pop(ctx); }, child: const Text('Quitar', style: TextStyle(color: _kViolet))),
+            ElevatedButton(
+              onPressed: () {
+                String? finFinal;
+                if (selFin == 'nunca') finFinal = 'nunca';
+                else if (selFin == 'fecha' && fechaFin != null) finFinal = 'fecha:${fechaFin!.toIso8601String().split('T')[0]}';
+                else if (selFin == 'despues') finFinal = 'despues:${nVecesCtrl.text}';
+                onResult(selRep, finFinal);
+                Navigator.pop(ctx);
+              },
+              child: const Text('Listo'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tema = ref.watch(themeProvider);
@@ -95,7 +341,7 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
       appBar: AppBar(
         backgroundColor: colors.fondoHeader,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: colors.textoPrincipal),
+          icon: const Icon(Icons.arrow_back, color: _kColor),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -108,255 +354,45 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Título editable
+          // 1. TÍTULO
           TextField(
             controller: _tituloCtrl,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: colors.textoPrincipal),
-            decoration: InputDecoration(
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _kColor),
+            decoration: const InputDecoration(
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
-              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: colors.bordeSutil, width: 0.5)),
+              focusedBorder: InputBorder.none,
               hintText: 'Título de la misión',
-              hintStyle: TextStyle(color: colors.textoMuted, fontSize: 22, fontWeight: FontWeight.bold),
+              hintStyle: TextStyle(color: _kViolet, fontSize: 22, fontWeight: FontWeight.bold),
             ),
             onChanged: (v) => _autoGuardar({'titulo': v}),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
-          // Detalle (nota libre)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.notes, color: colors.textoMuted, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _detalleCtrl,
-                  style: TextStyle(fontSize: 14, color: colors.textoSecundario),
-                  maxLines: null,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    hintText: 'Agregar detalles',
-                    hintStyle: TextStyle(color: colors.textoMuted, fontSize: 14),
-                  ),
-                  onChanged: (v) => _autoGuardar({'detalle': v}),
-                ),
-              ),
-            ],
-          ),
-          Divider(color: colors.bordeSutil, height: 32),
-
-          // XP con ruleta
-          _XPRuleta(
-            xpActual: widget.mision.xpRecompensa,
-            colors: colors,
-            onChanged: (xp) => _autoGuardar({'xpRecompensa': xp}),
-          ),
-          Divider(color: colors.bordeSutil, height: 32),
-
-          // Placeholders para los campos que vienen
-          _FechaHoraRow(
-            fecha: _fecha,
-            hora: _hora,
-            horaActivada: _horaActivada,
-            colors: colors,
-            onFechaChanged: (fecha) async {
-              setState(() => _fecha = fecha);
-              await _autoGuardar({'fecha': fecha != null ? Timestamp.fromDate(fecha) : null});
-            },
-            onHoraChanged: (hora) async {
-              setState(() { _hora = hora; _horaActivada = hora != null; });
-              await _autoGuardar({
-                'hora': hora != null ? '${hora.hour.toString().padLeft(2,'0')}:${hora.minute.toString().padLeft(2,'0')}' : null,
-                'horaActivada': hora != null,
-              });
-            },
-          ),
-          Divider(color: colors.bordeSutil, height: 1),
-          _PlaceholderRow(icon: Icons.subdirectory_arrow_right, label: 'Agregar subtareas', colors: colors),
-          Divider(color: colors.bordeSutil, height: 1),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlaceholderRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final AppColors colors;
-  const _PlaceholderRow({required this.icon, required this.label, required this.colors});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Icon(icon, color: colors.textoMuted, size: 20),
-          const SizedBox(width: 12),
-          Text(label, style: TextStyle(fontSize: 14, color: colors.textoMuted)),
-        ],
-      ),
-    );
-  }
-}
-
-class _FechaHoraRow extends StatelessWidget {
-  final DateTime? fecha;
-  final TimeOfDay? hora;
-  final bool horaActivada;
-  final AppColors colors;
-  final Function(DateTime?) onFechaChanged;
-  final Function(TimeOfDay?) onHoraChanged;
-
-  const _FechaHoraRow({required this.fecha, required this.hora, required this.horaActivada, required this.colors, required this.onFechaChanged, required this.onHoraChanged});
-
-  String _formatFecha(DateTime d) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final tomorrow = today.add(const Duration(days: 1));
-    final fecha = DateTime(d.year, d.month, d.day);
-    if (fecha == today) return 'Hoy';
-    if (fecha == tomorrow) return 'Mañana';
-    return '${d.day}/${d.month}/${d.year}';
-  }
-
-  String _formatHora(TimeOfDay t) {
-    final h = t.hour.toString().padLeft(2, '0');
-    final m = t.minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: fecha ?? DateTime.now(),
-          firstDate: DateTime(2020),
-          lastDate: DateTime(2030),
-          builder: (ctx, child) => Theme(
-            data: ThemeData.dark().copyWith(
-              colorScheme: ColorScheme.dark(primary: colors.acentoPrimario),
-            ),
-            child: child!,
-          ),
-        );
-        if (picked != null) {
-          onFechaChanged(picked);
-          // Preguntar hora
-          final pickedHora = await showTimePicker(
-            context: context,
-            initialTime: hora ?? TimeOfDay.now(),
-            builder: (ctx, child) => Theme(
-              data: ThemeData.dark().copyWith(
-                colorScheme: ColorScheme.dark(primary: colors.acentoPrimario),
-              ),
-              child: child!,
-            ),
-          );
-          if (pickedHora != null) onHoraChanged(pickedHora);
-        }
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Icon(Icons.calendar_today_outlined, color: fecha != null ? colors.acentoPrimario : colors.textoMuted, size: 20),
-            const SizedBox(width: 12),
-            fecha == null
-                ? Text('Agregar fecha/hora', style: TextStyle(fontSize: 14, color: colors.textoMuted))
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_formatFecha(fecha!), style: TextStyle(fontSize: 14, color: colors.acentoSecundario)),
-                      if (horaActivada && hora != null)
-                        Text(_formatHora(hora!), style: TextStyle(fontSize: 12, color: colors.textoMuted)),
-                    ],
-                  ),
-            if (fecha != null) ...[
-              const Spacer(),
-              GestureDetector(
-                onTap: () { onFechaChanged(null); onHoraChanged(null); },
-                child: Icon(Icons.close, color: colors.textoMuted, size: 16),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _XPRuleta extends StatefulWidget {
-  final int xpActual;
-  final AppColors colors;
-  final Function(int) onChanged;
-  const _XPRuleta({required this.xpActual, required this.colors, required this.onChanged});
-
-  @override
-  State<_XPRuleta> createState() => _XPRuletaState();
-}
-
-class _XPRuletaState extends State<_XPRuleta> {
-  final xpOpciones = const [
-    {'label': 'No lo merezco', 'xp': 0},
-    {'label': 'Un poquito', 'xp': 111},
-    {'label': 'Un toco', 'xp': 333},
-    {'label': 'Una bandaaa', 'xp': 777},
-  ];
-  late int _selectedIndex;
-  late FixedExtentScrollController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIndex = xpOpciones.indexWhere((o) => o['xp'] == widget.xpActual);
-    if (_selectedIndex == -1) _selectedIndex = 1;
-    _ctrl = FixedExtentScrollController(initialItem: _selectedIndex);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = widget.colors;
-    return Row(
-      children: [
-        Icon(Icons.auto_awesome, color: colors.textoMuted, size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: SizedBox(
-            height: 80,
+          // 2. EXPERIENCIA (centrada, sin ícono)
+          SizedBox(
+            height: 90,
             child: ListWheelScrollView.useDelegate(
-              controller: _ctrl,
-              itemExtent: 30,
+              controller: _xpCtrl,
+              itemExtent: 32,
               perspective: 0.003,
               diameterRatio: 1.6,
               physics: const FixedExtentScrollPhysics(),
               onSelectedItemChanged: (i) {
-                setState(() => _selectedIndex = i);
-                widget.onChanged(xpOpciones[i]['xp'] as int);
+                setState(() => _xpIndex = i);
+                _autoGuardar({'xpRecompensa': _xpOpciones[i]['xp']});
               },
               childDelegate: ListWheelChildBuilderDelegate(
-                childCount: xpOpciones.length,
+                childCount: _xpOpciones.length,
                 builder: (ctx, i) {
-                  final isSelected = i == _selectedIndex;
+                  final isSelected = i == _xpIndex;
                   return Center(
                     child: Text(
-                      '${xpOpciones[i]['label']}  ${xpOpciones[i]['xp'] == 0 ? '' : '+${xpOpciones[i]['xp']} XP'}',
+                      '${_xpOpciones[i]['label']}  ${_xpOpciones[i]['xp'] == 0 ? '' : '+${_xpOpciones[i]['xp']} XP'}',
                       style: TextStyle(
-                        fontSize: isSelected ? 14 : 11,
-                        fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
-                        color: isSelected ? colors.acentoSecundario : colors.textoMuted,
+                        fontSize: isSelected ? 15 : 12,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        color: isSelected ? _kColor : _kViolet,
                       ),
                     ),
                   );
@@ -364,8 +400,83 @@ class _XPRuletaState extends State<_XPRuleta> {
               ),
             ),
           ),
-        ),
-      ],
+          Divider(color: colors.bordeSutil, height: 24),
+
+          // 3. DETALLES
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.notes, color: _kViolet, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _detalleCtrl,
+                  style: const TextStyle(fontSize: 14, color: _kColor),
+                  maxLines: null,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    hintText: 'Agregar detalles',
+                    hintStyle: TextStyle(color: _kViolet, fontSize: 14),
+                  ),
+                  onChanged: (v) => _autoGuardar({'detalle': v}),
+                ),
+              ),
+            ],
+          ),
+          Divider(color: colors.bordeSutil, height: 24),
+
+          // 4. FECHA/HORA
+          GestureDetector(
+            onTap: _showFechaDialog,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_today_outlined, color: _fecha != null ? colors.acentoPrimario : _kColor, size: 20),
+                  const SizedBox(width: 12),
+                  _fecha == null
+                      ? const Text('Agregar fecha/hora', style: TextStyle(fontSize: 14, color: _kColor))
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_formatFecha(_fecha!), style: TextStyle(fontSize: 14, color: colors.acentoSecundario)),
+                            if (_horaActivada && _hora != null)
+                              Text(_formatHora(_hora!), style: const TextStyle(fontSize: 12, color: _kViolet)),
+                            if (_repeticion != null)
+                              Text(_repeticionLabel, style: const TextStyle(fontSize: 11, color: _kViolet)),
+                          ],
+                        ),
+                  if (_fecha != null) ...[
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() { _fecha = null; _hora = null; _horaActivada = false; _repeticion = null; _finalizacion = null; });
+                        _autoGuardar({'fecha': null, 'hora': null, 'horaActivada': false, 'repeticion': null, 'finalizacion': null});
+                      },
+                      child: const Icon(Icons.close, color: _kViolet, size: 16),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          Divider(color: colors.bordeSutil, height: 24),
+
+          // 5. SUBTAREAS (placeholder)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(Icons.subdirectory_arrow_right, color: _kColor, size: 20),
+                SizedBox(width: 12),
+                Text('Agregar subtareas', style: TextStyle(fontSize: 14, color: _kColor)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
