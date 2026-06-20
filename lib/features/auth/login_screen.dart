@@ -78,9 +78,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final tema = ref.watch(themeProvider);
     final colors = AppColors.fromTema(tema);
 
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    final wallpaper = isTablet ? 'assets/images/wallpaper_tablet.png' : 'assets/images/Wallpaper_celu.png';
+
     return Scaffold(
       backgroundColor: colors.fondoPrincipal,
-      body: SafeArea(
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(wallpaper),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
@@ -131,6 +141,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

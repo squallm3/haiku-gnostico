@@ -51,34 +51,44 @@ class _LogoutScreenState extends ConsumerState<LogoutScreen>
   Widget build(BuildContext context) {
     final tema = ref.watch(themeProvider);
     final colors = AppColors.fromTema(tema);
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    final wallpaper = isTablet ? 'assets/images/wallpaper_tablet.png' : 'assets/images/Wallpaper_celu.png';
 
     return Scaffold(
       backgroundColor: colors.fondoPrincipal,
-      body: FadeTransition(
-        opacity: _fade,
-        child: Center(
-          child: ScaleTransition(
-            scale: _scale,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('🦊', style: TextStyle(fontSize: 72)),
-                const SizedBox(height: 24),
-                Text(
-                  'Hasta la próxima,',
-                  style: TextStyle(fontSize: 18, color: colors.textoSecundario),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _nombre,
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: colors.textoPrincipal),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '⚡ La gnosis te espera ⚡',
-                  style: TextStyle(fontSize: 13, color: colors.textoMuted),
-                ),
-              ],
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(wallpaper),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: FadeTransition(
+          opacity: _fade,
+          child: Center(
+            child: ScaleTransition(
+              scale: _scale,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/zorro.png', height: 120, width: 120),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Hasta la próxima,',
+                    style: TextStyle(fontSize: 18, color: colors.textoSecundario),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _nombre,
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: colors.textoPrincipal),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '⚡ La gnosis te espera ⚡',
+                    style: TextStyle(fontSize: 13, color: colors.textoMuted),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
