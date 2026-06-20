@@ -90,7 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
               const Spacer(),
-              const Text('🦊', textAlign: TextAlign.center, style: TextStyle(fontSize: 72)),
+              Image.asset('assets/images/zorro.png', height: 120, width: 120),
               const SizedBox(height: 16),
               Text(
                 'Escuela de los\nHaikus Gnósticos',
