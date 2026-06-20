@@ -28,12 +28,21 @@ class MisionDetalleScreen extends ConsumerStatefulWidget {
 class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
   late TextEditingController _tituloCtrl;
   late TextEditingController _detalleCtrl;
+  DateTime? _fecha;
+  bool _horaActivada = false;
+  TimeOfDay? _hora;
 
   @override
   void initState() {
     super.initState();
     _tituloCtrl = TextEditingController(text: widget.mision.titulo);
     _detalleCtrl = TextEditingController(text: widget.mision.detalle);
+    _fecha = widget.mision.fecha;
+    _horaActivada = widget.mision.horaActivada;
+    if (widget.mision.hora != null) {
+      final parts = widget.mision.hora!.split(':');
+      _hora = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    }
   }
 
   @override
@@ -148,7 +157,23 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
           Divider(color: colors.bordeSutil, height: 32),
 
           // Placeholders para los campos que vienen
-          _PlaceholderRow(icon: Icons.calendar_today_outlined, label: 'Agregar fecha/hora', colors: colors),
+          _FechaHoraRow(
+            fecha: _fecha,
+            hora: _hora,
+            horaActivada: _horaActivada,
+            colors: colors,
+            onFechaChanged: (fecha) async {
+              setState(() => _fecha = fecha);
+              await _autoGuardar({'fecha': fecha != null ? Timestamp.fromDate(fecha) : null});
+            },
+            onHoraChanged: (hora) async {
+              setState(() { _hora = hora; _horaActivada = hora != null; });
+              await _autoGuardar({
+                'hora': hora != null ? '${hora.hour.toString().padLeft(2,'0')}:${hora.minute.toString().padLeft(2,'0')}' : null,
+                'horaActivada': hora != null,
+              });
+            },
+          ),
           Divider(color: colors.bordeSutil, height: 1),
           _PlaceholderRow(icon: Icons.subdirectory_arrow_right, label: 'Agregar subtareas', colors: colors),
           Divider(color: colors.bordeSutil, height: 1),
@@ -174,6 +199,94 @@ class _PlaceholderRow extends StatelessWidget {
           const SizedBox(width: 12),
           Text(label, style: TextStyle(fontSize: 14, color: colors.textoMuted)),
         ],
+      ),
+    );
+  }
+}
+
+class _FechaHoraRow extends StatelessWidget {
+  final DateTime? fecha;
+  final TimeOfDay? hora;
+  final bool horaActivada;
+  final AppColors colors;
+  final Function(DateTime?) onFechaChanged;
+  final Function(TimeOfDay?) onHoraChanged;
+
+  const _FechaHoraRow({required this.fecha, required this.hora, required this.horaActivada, required this.colors, required this.onFechaChanged, required this.onHoraChanged});
+
+  String _formatFecha(DateTime d) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final fecha = DateTime(d.year, d.month, d.day);
+    if (fecha == today) return 'Hoy';
+    if (fecha == tomorrow) return 'Mañana';
+    return '${d.day}/${d.month}/${d.year}';
+  }
+
+  String _formatHora(TimeOfDay t) {
+    final h = t.hour.toString().padLeft(2, '0');
+    final m = t.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: fecha ?? DateTime.now(),
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2030),
+          builder: (ctx, child) => Theme(
+            data: ThemeData.dark().copyWith(
+              colorScheme: ColorScheme.dark(primary: colors.acentoPrimario),
+            ),
+            child: child!,
+          ),
+        );
+        if (picked != null) {
+          onFechaChanged(picked);
+          // Preguntar hora
+          final pickedHora = await showTimePicker(
+            context: context,
+            initialTime: hora ?? TimeOfDay.now(),
+            builder: (ctx, child) => Theme(
+              data: ThemeData.dark().copyWith(
+                colorScheme: ColorScheme.dark(primary: colors.acentoPrimario),
+              ),
+              child: child!,
+            ),
+          );
+          if (pickedHora != null) onHoraChanged(pickedHora);
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today_outlined, color: fecha != null ? colors.acentoPrimario : colors.textoMuted, size: 20),
+            const SizedBox(width: 12),
+            fecha == null
+                ? Text('Agregar fecha/hora', style: TextStyle(fontSize: 14, color: colors.textoMuted))
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_formatFecha(fecha!), style: TextStyle(fontSize: 14, color: colors.acentoSecundario)),
+                      if (horaActivada && hora != null)
+                        Text(_formatHora(hora!), style: TextStyle(fontSize: 12, color: colors.textoMuted)),
+                    ],
+                  ),
+            if (fecha != null) ...[
+              const Spacer(),
+              GestureDetector(
+                onTap: () { onFechaChanged(null); onHoraChanged(null); },
+                child: Icon(Icons.close, color: colors.textoMuted, size: 16),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

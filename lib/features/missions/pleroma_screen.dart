@@ -11,6 +11,7 @@ import '../../core/models/user_model.dart';
 import '../../core/models/mission_model.dart';
 import '../../services/firestore_service.dart';
 import 'levelup_overlay.dart';
+import 'mision_detalle_screen.dart';
 
 final _pleromiProvider = StreamProvider.autoDispose<List<PleromiModel>>((ref) {
   final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -533,7 +534,6 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                       PopupMenuItem(enabled: false, height: 28, child: Text('Ordenar por', style: TextStyle(fontSize: 11, color: colors.textoMuted, fontWeight: FontWeight.w600))),
                       _buildOrdenItem('mi_orden', 'Mi orden', _ordenActual, colors),
                       _buildOrdenItem('fecha', 'Fecha', _ordenActual, colors),
-                      _buildOrdenItem('fecha_limite', 'Fecha límite', _ordenActual, colors),
                       _buildOrdenItem('titulo', 'Título', _ordenActual, colors),
                       _buildOrdenItem('experiencia', 'Experiencia', _ordenActual, colors),
                       const PopupMenuDivider(),
@@ -934,12 +934,15 @@ class _MisionCard extends ConsumerWidget {
             .delete();
       },
       child: GestureDetector(
-        onTap: () async {
-          if (mision.completada) {
-            await ref.read(firestoreServiceProvider).desmarcarMision(pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
-          } else {
-            await ref.read(firestoreServiceProvider).completarMision(userId: userId, pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
-          }
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(
+            builder: (_) => MisionDetalleScreen(
+              mision: mision,
+              pleromiId: pleromiId,
+              sizigiaId: sizigiaId,
+              userId: userId,
+            ),
+          ));
         },
         child: Container(
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -951,15 +954,24 @@ class _MisionCard extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: mision.completada ? colors.acentoPrimario : Colors.transparent,
-                  border: Border.all(color: mision.completada ? colors.acentoPrimario : colors.bordeSutil, width: 2),
+              GestureDetector(
+                onTap: () async {
+                  if (mision.completada) {
+                    await ref.read(firestoreServiceProvider).desmarcarMision(pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
+                  } else {
+                    await ref.read(firestoreServiceProvider).completarMision(userId: userId, pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
+                  }
+                },
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: mision.completada ? colors.acentoPrimario : Colors.transparent,
+                    border: Border.all(color: mision.completada ? colors.acentoPrimario : colors.bordeSutil, width: 2),
+                  ),
+                  child: mision.completada ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
                 ),
-                child: mision.completada ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
               ),
               const SizedBox(width: 12),
               Expanded(
