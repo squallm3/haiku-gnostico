@@ -1005,14 +1005,20 @@ class _MisionCard extends ConsumerWidget {
                         child: Icon(Icons.drag_handle, color: colors.textoMuted, size: 18),
                       ),
                     Expanded(
-                      child: Text(
-                        mision.titulo,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: mision.completada ? colors.textoMuted : colors.textoPrincipal,
-                          decoration: mision.completada ? TextDecoration.lineThrough : null,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            mision.titulo,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: mision.completada ? colors.textoMuted : colors.textoPrincipal,
+                              decoration: mision.completada ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                          _InfoRow(mision: mision, colors: colors),
+                        ],
                       ),
                     ),
                     if (mision.xpRecompensa > 0)
@@ -1027,6 +1033,71 @@ class _MisionCard extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final MisionModel mision;
+  final AppColors colors;
+  const _InfoRow({required this.mision, required this.colors});
+
+  String _formatFecha(DateTime d) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final fecha = DateTime(d.year, d.month, d.day);
+    if (fecha == today) return 'Hoy';
+    if (fecha == tomorrow) return 'Mañana';
+    return '📅 ${d.day}/${d.month}/${d.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tieneInfo = mision.fecha != null || mision.repeticion != null || mision.subtareas.isNotEmpty;
+    if (!tieneInfo) return const SizedBox.shrink();
+
+    final completadas = mision.subtareas.where((s) => s.completada).length;
+    final total = mision.subtareas.length;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (mision.fecha != null) ...[
+                Text(_formatFecha(mision.fecha!), style: TextStyle(fontSize: 11, color: colors.textoMuted)),
+                if (mision.horaActivada && mision.hora != null) ...[
+                  const SizedBox(width: 6),
+                  Text(mision.hora!, style: TextStyle(fontSize: 11, color: colors.textoMuted)),
+                ],
+              ],
+              if (mision.repeticion != null) ...[
+                if (mision.fecha != null) const SizedBox(width: 6),
+                Icon(Icons.repeat, size: 11, color: colors.textoMuted),
+              ],
+              if (total > 0) ...[
+                if (mision.fecha != null || mision.repeticion != null) const SizedBox(width: 6),
+                Text('$completadas/$total', style: TextStyle(fontSize: 11, color: colors.textoMuted)),
+              ],
+            ],
+          ),
+          if (total > 0) ...[
+            const SizedBox(height: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: total > 0 ? completadas / total : 0,
+                backgroundColor: colors.bordeSutil,
+                valueColor: AlwaysStoppedAnimation(colors.acentoPrimario),
+                minHeight: 2,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
