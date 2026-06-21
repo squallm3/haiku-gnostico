@@ -1024,7 +1024,7 @@ class _MisionCard extends ConsumerWidget {
                     if (mision.xpRecompensa > 0)
                       Text(
                         '+${mision.xpRecompensa}',
-                        style: TextStyle(fontSize: 10, color: colors.acentoPrimario.withValues(alpha: 0.7)),
+                        style: TextStyle(fontSize: 13, color: colors.acentoPrimario.withValues(alpha: 0.7)),
                       ),
 
                   ],
