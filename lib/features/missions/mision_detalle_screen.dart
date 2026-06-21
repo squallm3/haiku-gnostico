@@ -557,8 +557,12 @@ class _SubtareasWidgetState extends State<_SubtareasWidget> {
             direction: DismissDirection.endToStart,
             background: Container(
               alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 16),
-              child: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+              padding: const EdgeInsets.only(right: 20),
+              decoration: BoxDecoration(
+                color: Colors.red.shade800,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.delete_outline, color: Colors.white, size: 22),
             ),
             onDismissed: (_) => _eliminar(i),
             child: Padding(
