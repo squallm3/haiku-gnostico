@@ -6,6 +6,7 @@ import '../../core/themes/app_themes.dart';
 import '../../core/themes/theme_provider.dart';
 import '../../core/models/mission_model.dart';
 import '../../services/firestore_service.dart';
+import 'repeticion_screen.dart';
 
 const _kColor = Color(0xFFf0e0ff);
 const _kViolet = Color(0xFFcc88ff);
@@ -199,13 +200,21 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
                       )
                     : null,
                 onTap: () async {
-                  Navigator.pop(ctx);
-                  await _showRepeticionDialog(colors, tempRep, tempFin, (rep, fin) {
-                    tempRep = rep; tempFin = fin;
-                  });
-                  if (mounted) setState(() { _repeticion = tempRep; _finalizacion = tempFin; });
-                  await _autoGuardar({'repeticion': tempRep, 'finalizacion': tempFin});
-                  return;
+                  final result = await Navigator.push<Map<String, String?>>(
+                    ctx,
+                    MaterialPageRoute(builder: (_) => RepeticionScreen(
+                      repeticion: tempRep,
+                      finalizacion: tempFin,
+                      fechaInicio: tempFecha,
+                      colors: colors,
+                    )),
+                  );
+                  if (result != null) {
+                    setS(() {
+                      tempRep = result['repeticion'];
+                      tempFin = result['finalizacion'];
+                    });
+                  }
                 },
               ),
               Divider(color: colors.bordeSutil, height: 1),
@@ -464,8 +473,156 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
           ),
           Divider(color: colors.bordeSutil, height: 24),
 
-          // 5. SUBTAREAS (placeholder)
-          const Padding(
+          // 5. SUBTAREAS
+          _SubtareasWidget(
+            subtareas: widget.mision.subtareas,
+            onChanged: (subtareas) => _autoGuardar({
+              'subtareas': subtareas.map((s) => s.toMap()).toList(),
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubtareasWidget extends StatefulWidget {
+  final List<SubtareaModel> subtareas;
+  final Function(List<SubtareaModel>) onChanged;
+
+  const _SubtareasWidget({required this.subtareas, required this.onChanged});
+
+  @override
+  State<_SubtareasWidget> createState() => _SubtareasWidgetState();
+}
+
+class _SubtareasWidgetState extends State<_SubtareasWidget> {
+  late List<SubtareaModel> _items;
+  final _newCtrl = TextEditingController();
+  bool _showInput = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _items = [...widget.subtareas];
+  }
+
+  @override
+  void dispose() {
+    _newCtrl.dispose();
+    super.dispose();
+  }
+
+  void _toggle(int i) {
+    setState(() {
+      _items[i] = SubtareaModel(
+        id: _items[i].id,
+        titulo: _items[i].titulo,
+        completada: !_items[i].completada,
+      );
+    });
+    widget.onChanged(_items);
+  }
+
+  void _agregar() {
+    final txt = _newCtrl.text.trim();
+    if (txt.isEmpty) { setState(() => _showInput = false); return; }
+    setState(() {
+      _items.add(SubtareaModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        titulo: txt,
+        completada: false,
+      ));
+      _newCtrl.clear();
+      _showInput = false;
+    });
+    widget.onChanged(_items);
+  }
+
+  void _eliminar(int i) {
+    setState(() => _items.removeAt(i));
+    widget.onChanged(_items);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ..._items.asMap().entries.map((e) {
+          final i = e.key;
+          final sub = e.value;
+          return Dismissible(
+            key: ValueKey(sub.id),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 16),
+              child: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+            ),
+            onDismissed: (_) => _eliminar(i),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => _toggle(i),
+                    child: Container(
+                      width: 20, height: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: sub.completada ? _kViolet : Colors.transparent,
+                        border: Border.all(color: _kViolet, width: 1.5),
+                      ),
+                      child: sub.completada ? const Icon(Icons.check, size: 12, color: Colors.white) : null,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      sub.titulo,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: sub.completada ? _kViolet : _kColor,
+                        decoration: sub.completada ? TextDecoration.lineThrough : null,
+                        decorationColor: _kViolet,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+        if (_showInput)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                const SizedBox(width: 32),
+                Expanded(
+                  child: TextField(
+                    controller: _newCtrl,
+                    autofocus: true,
+                    style: const TextStyle(fontSize: 14, color: _kColor),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: 'Nueva subtarea...',
+                      hintStyle: TextStyle(color: _kViolet, fontSize: 14),
+                    ),
+                    onSubmitted: (_) => _agregar(),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.check, color: _kViolet, size: 18),
+                  onPressed: _agregar,
+                ),
+              ],
+            ),
+          ),
+        GestureDetector(
+          onTap: () => setState(() => _showInput = true),
+          child: const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
@@ -475,8 +632,8 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
