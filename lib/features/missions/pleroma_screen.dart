@@ -1050,7 +1050,7 @@ class _InfoRow extends StatelessWidget {
     final fecha = DateTime(d.year, d.month, d.day);
     if (fecha == today) return 'Hoy';
     if (fecha == tomorrow) return 'Mañana';
-    return '📅 ${d.day}/${d.month}/${d.year}';
+    return '${d.day}/${d.month}/${d.year}';
   }
 
   @override
@@ -1060,6 +1060,7 @@ class _InfoRow extends StatelessWidget {
 
     final completadas = mision.subtareas.where((s) => s.completada).length;
     final total = mision.subtareas.length;
+    final color = colors.textoMuted;
 
     return Padding(
       padding: const EdgeInsets.only(top: 4),
@@ -1067,33 +1068,37 @@ class _InfoRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               if (mision.fecha != null) ...[
-                Text(_formatFecha(mision.fecha!), style: TextStyle(fontSize: 11, color: colors.textoMuted)),
+                Text(_formatFecha(mision.fecha!), style: TextStyle(fontSize: 11, color: color)),
                 if (mision.horaActivada && mision.hora != null) ...[
-                  const SizedBox(width: 6),
-                  Text(mision.hora!, style: TextStyle(fontSize: 11, color: colors.textoMuted)),
+                  const SizedBox(width: 4),
+                  Text(mision.hora!, style: TextStyle(fontSize: 11, color: color)),
                 ],
               ],
               if (mision.repeticion != null) ...[
-                if (mision.fecha != null) const SizedBox(width: 6),
-                Icon(Icons.repeat, size: 11, color: colors.textoMuted),
+                if (mision.fecha != null) const SizedBox(width: 4),
+                Icon(Icons.repeat, size: 11, color: color),
               ],
               if (total > 0) ...[
-                if (mision.fecha != null || mision.repeticion != null) const SizedBox(width: 6),
-                Text('$completadas/$total', style: TextStyle(fontSize: 11, color: colors.textoMuted)),
+                if (mision.fecha != null || mision.repeticion != null) const SizedBox(width: 4),
+                Text('$completadas/$total', style: TextStyle(fontSize: 11, color: color)),
               ],
             ],
           ),
           if (total > 0) ...[
             const SizedBox(height: 4),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: total > 0 ? completadas / total : 0,
-                backgroundColor: colors.bordeSutil,
-                valueColor: AlwaysStoppedAnimation(colors.acentoPrimario),
-                minHeight: 2,
+            SizedBox(
+              width: 80,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: completadas / total,
+                  backgroundColor: colors.bordeSutil,
+                  valueColor: AlwaysStoppedAnimation(colors.acentoPrimario),
+                  minHeight: 2,
+                ),
               ),
             ),
           ],
