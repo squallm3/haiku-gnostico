@@ -321,6 +321,11 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
       }
       final oldController = _tabController;
       final newController = TabController(length: sizigias.length + 2, vsync: this, initialIndex: _tabIndex);
+      // Sync selectedSizigiaId on rebuild
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final sid = _tabIndex == 0 ? null : (sizigias.length >= _tabIndex ? sizigias[_tabIndex - 1].id : null);
+        widget.onSizigiaSelected(sid);
+      });
       newController.addListener(() {
         if (!newController.indexIsChanging) {
           if (newController.index == sizigias.length + 1) {
@@ -537,6 +542,11 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                       _buildOrdenItem('titulo', 'Título', _ordenActual, colors),
                       _buildOrdenItem('experiencia', 'Experiencia', _ordenActual, colors),
                       const PopupMenuDivider(),
+                      if (_tabIndex > 0) ...[
+                        PopupMenuItem(value: 'renombrar', child: Text('Cambiar nombre de la lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
+                        PopupMenuItem(value: 'eliminar_lista', child: Text('Eliminar lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
+                        const PopupMenuDivider(),
+                      ],
                       PopupMenuItem(value: 'borrar_completadas', child: Text('Borrar todas las tareas completadas', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
                     ],
                   ),
