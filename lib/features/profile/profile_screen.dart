@@ -113,88 +113,64 @@ class ProfileScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Sección superior: foto + datos
+                // Sección superior: centrada
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                   decoration: BoxDecoration(color: colors.fondoSuperficie, borderRadius: BorderRadius.circular(20), border: Border.all(color: colors.bordeSutil, width: 0.5)),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Column(
                     children: [
-                      // Foto
                       Container(
-                        width: 80, height: 80,
+                        width: 90, height: 90,
                         decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: colors.bordePrincipal, width: 2)),
                         child: ClipOval(
                           child: user.photoURL != null
                               ? Image.network(user.photoURL!, fit: BoxFit.cover)
-                              : Center(child: Text('🦊', style: const TextStyle(fontSize: 36))),
+                              : Image.asset('assets/images/zorro.png', fit: BoxFit.cover),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      // Datos
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 12),
+                      Text('Nivel $nivel', style: TextStyle(fontSize: 12, color: colors.textoMuted)),
+                      const SizedBox(height: 4),
+                      Text(titulo, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.textoPrincipal), textAlign: TextAlign.center),
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () {
+                          final desc = getDescripcionArtefacto(nivel);
+                          if (desc == null) return;
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => Dialog(
+                              backgroundColor: Colors.transparent,
+                              child: Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(color: colors.fondoSuperficie, borderRadius: BorderRadius.circular(20), border: Border.all(color: colors.bordeSutil, width: 0.5)),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(artefacto, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textoPrincipal)),
+                                    const SizedBox(height: 12),
+                                    Text(desc, style: TextStyle(fontSize: 13, color: colors.textoSecundario, height: 1.5)),
+                                    const SizedBox(height: 16),
+                                    Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cerrar', style: TextStyle(color: colors.acentoPrimario)))),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Nivel $nivel', style: TextStyle(fontSize: 12, color: colors.textoMuted)),
-                            Text(titulo, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textoPrincipal), maxLines: 2),
-                            const SizedBox(height: 4),
-                            GestureDetector(
-                              onTap: () {
-                                final desc = getDescripcionArtefacto(nivel);
-                                if (desc == null) return;
-                                showDialog(
-                                  context: context,
-                                  builder: (ctx) => Dialog(
-                                    backgroundColor: Colors.transparent,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(24),
-                                      decoration: BoxDecoration(
-                                        color: colors.fondoSuperficie,
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(color: colors.bordeSutil, width: 0.5),
-                                      ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(artefacto, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textoPrincipal)),
-                                          const SizedBox(height: 12),
-                                          Text(desc, style: TextStyle(fontSize: 13, color: colors.textoSecundario, height: 1.5)),
-                                          const SizedBox(height: 16),
-                                          Align(
-                                            alignment: Alignment.centerRight,
-                                            child: TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cerrar', style: TextStyle(color: colors.acentoPrimario))),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Row(
-                                children: [
-                                  Text(artefacto, style: TextStyle(fontSize: 13, color: colors.textoSecundario)),
-                                  const SizedBox(width: 4),
-                                  Icon(Icons.info_outline, size: 12, color: colors.textoMuted),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            // Boton Comprar Equipamiento
-                            OutlinedButton(
-                              onPressed: () {},
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: colors.acentoPrimario, width: 1),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: Text('Comprar Equipamiento', style: TextStyle(fontSize: 11, color: colors.acentoPrimario)),
-                            ),
+                            Text(artefacto, style: TextStyle(fontSize: 13, color: colors.textoSecundario)),
+                            const SizedBox(width: 4),
+                            Icon(Icons.info_outline, size: 12, color: colors.textoMuted),
                           ],
                         ),
                       ),
+                      const SizedBox(height: 20),
+                      _PulsanteButton(colors: colors),
                     ],
                   ),
                 ),
@@ -379,6 +355,53 @@ class _NivelesAcordeonState extends State<_NivelesAcordeon> {
               },
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _PulsanteButton extends StatefulWidget {
+  final AppColors colors;
+  const _PulsanteButton({required this.colors});
+  @override
+  State<_PulsanteButton> createState() => _PulsanteButtonState();
+}
+
+class _PulsanteButtonState extends State<_PulsanteButton> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0, end: 12).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.colors;
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) => Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: colors.acentoPrimario.withValues(alpha: 0.5), blurRadius: _anim.value, spreadRadius: _anim.value / 4)],
+        ),
+        child: ElevatedButton(
+          onPressed: () {},
+          style: ElevatedButton.styleFrom(
+            backgroundColor: colors.acentoPrimario,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            elevation: 0,
+          ),
+          child: const Text('Comprar Equipamiento', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        ),
       ),
     );
   }
