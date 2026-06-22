@@ -57,6 +57,13 @@ class ProfileScreen extends ConsumerWidget {
                   'artefacto': nivelData.artefacto,
                 });
                 if (ctx.mounted) Navigator.pop(ctx);
+                if (context.mounted) {
+                  await showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => _LevelUpPasswordDialog(nivel: nivel, nivelData: nivelData, colors: colors),
+                  );
+                }
               },
               child: cargando
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -432,7 +439,8 @@ class _ImagenNivelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final path = 'assets/images/nivel_${nivel}_$slot.jpg';
+    final nivelStr = nivel < 10 ? '0$nivel' : '$nivel';
+    final path = 'assets/images/nivel_${nivelStr}_$slot.jpg';
     return Column(
       children: [
         ClipRRect(
@@ -469,6 +477,73 @@ class _ImagenNivelCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _LevelUpPasswordDialog extends StatefulWidget {
+  final int nivel;
+  final dynamic nivelData;
+  final AppColors colors;
+  const _LevelUpPasswordDialog({required this.nivel, required this.nivelData, required this.colors});
+
+  @override
+  State<_LevelUpPasswordDialog> createState() => _LevelUpPasswordDialogState();
+}
+
+class _LevelUpPasswordDialogState extends State<_LevelUpPasswordDialog>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+  late Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _scale = Tween<double>(begin: 0.5, end: 1.0).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    _ctrl.forward();
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) Navigator.pop(context);
+    });
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.colors;
+    return FadeTransition(
+      opacity: _fade,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        child: ScaleTransition(
+          scale: _scale,
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: colors.fondoSuperficie,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: colors.acentoPrimario, width: 1.5),
+              boxShadow: [BoxShadow(color: colors.acentoPrimario.withValues(alpha: 0.4), blurRadius: 24, spreadRadius: 2)],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('⚡', style: const TextStyle(fontSize: 48)),
+                const SizedBox(height: 12),
+                Text('¡Nivel ${widget.nivel}!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: colors.acentoPrimario)),
+                const SizedBox(height: 8),
+                Text(widget.nivelData.titulo, style: TextStyle(fontSize: 16, color: colors.textoPrincipal, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
+                const SizedBox(height: 6),
+                Text(widget.nivelData.artefacto, style: TextStyle(fontSize: 13, color: colors.textoSecundario), textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
