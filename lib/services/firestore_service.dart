@@ -174,14 +174,27 @@ class FirestoreService {
   // ─── SIZIGIAS ────────────────────────────────────────────────
   Stream<List<SizigiaModel>> sizigiaStream(String pleromiId) {
     return _db.collection('pleromos').doc(pleromiId)
-        .collection('sizigias').snapshots()
-        .map((s) => s.docs.map(SizigiaModel.fromFirestore).toList());
+        .collection('sizigias')
+        .snapshots()
+        .map((s) {
+          final list = s.docs.map(SizigiaModel.fromFirestore).toList();
+          list.sort((a, b) {
+            final ao = a.orden;
+            final bo = b.orden;
+            if (ao == null && bo == null) return 0;
+            if (ao == null) return -1;
+            if (bo == null) return 1;
+            return ao.compareTo(bo);
+          });
+          return list;
+        });
   }
 
   Future<void> createSizigia(String pleromiId, String nombre) async {
+    final snap = await _db.collection('pleromos').doc(pleromiId).collection('sizigias').get();
     await _db.collection('pleromos').doc(pleromiId)
         .collection('sizigias')
-        .add({'nombre': nombre, 'creadoEn': FieldValue.serverTimestamp()});
+        .add({'nombre': nombre, 'creadoEn': FieldValue.serverTimestamp(), 'orden': snap.docs.length});
   }
 
   // ─── MISIONES ────────────────────────────────────────────────
