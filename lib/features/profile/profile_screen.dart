@@ -176,67 +176,52 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // XP y próximo nivel
+                // Niveles alcanzados
+                _NivelesAcordeon(nivel: nivel, colors: colors),
+                const SizedBox(height: 12),
+
+                // Dos fotos lado a lado
+                Container(
+                  decoration: BoxDecoration(color: colors.fondoSuperficie, borderRadius: BorderRadius.circular(20), border: Border.all(color: colors.bordeSutil, width: 0.5)),
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Expanded(child: _ImagenNivelCard(nivel: nivel, slot: 'a', colors: colors)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _ImagenNivelCard(nivel: nivel, slot: 'b', colors: colors)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Estado actual
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(color: colors.fondoSuperficie, borderRadius: BorderRadius.circular(20), border: Border.all(color: colors.bordeSutil, width: 0.5)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('📊 Estado actual', style: TextStyle(fontSize: 12, color: colors.textoMuted, fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 8),
-                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                        Text('XP acumulada', style: TextStyle(fontSize: 13, color: colors.textoSecundario)),
-                        Text('$xp XP', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.textoPrincipal)),
-                      ]),
-                      const SizedBox(height: 4),
-                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                        Text('Próximo nivel', style: TextStyle(fontSize: 13, color: colors.textoSecundario)),
-                        Text('${nivelData.titulo}', style: TextStyle(fontSize: 12, color: colors.acentoSecundario)),
-                      ]),
-                      const SizedBox(height: 4),
-                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                        Text('Te faltan', style: TextStyle(fontSize: 13, color: colors.textoSecundario)),
-                        Text('$xpFalta XP', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.acentoPrimario)),
-                      ]),
+                      Text('Estado actual', style: TextStyle(fontSize: 11, color: colors.textoMuted, fontWeight: FontWeight.w500)),
                       const SizedBox(height: 10),
-                      // Barra de progreso
+                      _StatRow(label: 'XP acumulada', value: '$xp XP', colors: colors),
+                      const SizedBox(height: 6),
+                      _StatRow(label: 'Te faltan', value: '$xpFalta XP', accent: true, colors: colors),
+                      const SizedBox(height: 6),
+                      _StatRow(label: 'Próximo nivel', value: nivelData.titulo, small: true, colors: colors),
+                      const SizedBox(height: 10),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
                           value: xpFalta > 0 ? (xp / xpSigNivel).clamp(0.0, 1.0) : 1.0,
                           backgroundColor: colors.bordeSutil,
                           valueColor: AlwaysStoppedAnimation(colors.acentoPrimario),
-                          minHeight: 6,
+                          minHeight: 5,
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
-
-                // Placeholder imagen IA
-                Container(
-                  height: 180,
-                  decoration: BoxDecoration(color: colors.fondoSuperficie, borderRadius: BorderRadius.circular(20), border: Border.all(color: colors.bordeSutil, width: 0.5)),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('🎨', style: const TextStyle(fontSize: 40)),
-                      const SizedBox(height: 8),
-                      Text('Imagen del nivel $nivel', style: TextStyle(fontSize: 13, color: colors.textoMuted)),
-                      Text('(generada por IA — próximamente)', style: TextStyle(fontSize: 11, color: colors.textoMuted)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                const SizedBox(height: 12),
-
-                // Acordeon de niveles desbloqueados
-                _NivelesAcordeon(nivel: nivel, colors: colors),
-
-
 
                 // Resetear perfil temporal
                 OutlinedButton.icon(
@@ -403,6 +388,87 @@ class _PulsanteButtonState extends State<_PulsanteButton> with SingleTickerProvi
           child: const Text('Comprar Equipamiento', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
         ),
       ),
+    );
+  }
+}
+
+class _StatRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool accent;
+  final bool small;
+  final AppColors colors;
+  const _StatRow({required this.label, required this.value, required this.colors, this.accent = false, this.small = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontSize: 11, color: colors.textoMuted)),
+        Flexible(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: small ? 10 : 12,
+              fontWeight: FontWeight.w600,
+              color: accent ? colors.acentoPrimario : colors.textoPrincipal,
+            ),
+            textAlign: TextAlign.right,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ImagenNivelCard extends StatelessWidget {
+  final int nivel;
+  final String slot;
+  final AppColors colors;
+  const _ImagenNivelCard({required this.nivel, required this.slot, required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    final path = 'assets/images/nivel_${nivel}_$slot.jpg';
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: AspectRatio(
+            aspectRatio: 4 / 5,
+            child: Image.asset(
+              path,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: colors.fondoPrincipal,
+                child: Center(child: Icon(Icons.image_outlined, color: colors.textoMuted, size: 24)),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        GestureDetector(
+          onTap: () {},
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              border: Border.all(color: colors.bordeSutil, width: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.share_outlined, size: 12, color: colors.textoMuted),
+                const SizedBox(width: 4),
+                Text('Compartir', style: TextStyle(fontSize: 10, color: colors.textoMuted)),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
