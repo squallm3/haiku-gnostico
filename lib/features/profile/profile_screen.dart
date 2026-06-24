@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/themes/app_themes.dart';
 import '../../core/themes/theme_provider.dart';
 import '../../core/constants/levels.dart';
+import '../../core/widgets/cart_button.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -88,6 +89,7 @@ class ProfileScreen extends ConsumerWidget {
         backgroundColor: colors.fondoHeader,
         title: Text('Perfil', style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
         actions: [
+          CartButton(colors: colors),
           PopupMenuButton<String>(
             icon: Icon(Icons.settings_outlined, color: colors.textoMuted),
             color: colors.fondoSuperficie,

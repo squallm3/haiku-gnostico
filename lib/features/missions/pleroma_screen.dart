@@ -11,6 +11,7 @@ import '../../core/models/user_model.dart';
 import '../../core/models/mission_model.dart';
 import '../../services/firestore_service.dart';
 import 'levelup_overlay.dart';
+import '../../core/widgets/cart_button.dart';
 import 'mision_detalle_screen.dart';
 
 final _pleromiProvider = StreamProvider.autoDispose<List<PleromiModel>>((ref) {
@@ -50,7 +51,7 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
           ) : null,
           appBar: AppBar(
             title: Text('Misiones', style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
-            actions: const [],
+            actions: [CartButton(colors: colors)],
           ),
           body: pleromiAsync.when(
             loading: () => Center(child: CircularProgressIndicator(color: colors.acentoPrimario)),

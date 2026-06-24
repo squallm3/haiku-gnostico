@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/themes/app_themes.dart';
 import '../../core/themes/theme_provider.dart';
 import '../../core/models/producto_model.dart';
+import '../../core/widgets/cart_button.dart';
 
 class StoreScreen extends ConsumerWidget {
   const StoreScreen({super.key});
@@ -18,6 +19,9 @@ class StoreScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: colors.fondoHeader,
         title: Text('Tienda', style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
+        actions: [
+          CartButton(colors: colors, showStoreLink: false),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
