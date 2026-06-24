@@ -54,7 +54,7 @@ class HaikuGnosticoApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Escuela de los Haikus Gnósticos',
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(tema),
+      theme: AppColors.gnostico.toThemeData(),
       routerConfig: _router,
     );
   }

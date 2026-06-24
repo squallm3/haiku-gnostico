@@ -128,14 +128,16 @@ class PleromiModel {
 class SizigiaModel {
   final String id;
   final String nombre;
+  final int? orden;
 
-  SizigiaModel({required this.id, required this.nombre});
+  SizigiaModel({required this.id, required this.nombre, this.orden});
 
   factory SizigiaModel.fromFirestore(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
     return SizigiaModel(
       id: doc.id,
       nombre: d['nombre'] ?? '',
+      orden: d['orden'] as int?,
     );
   }
 }

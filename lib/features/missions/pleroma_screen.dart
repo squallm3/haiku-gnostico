@@ -534,7 +534,7 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                         }
                       }
                     },
-                    itemBuilder: (_) => [
+                    itemBuilder: (_) { final tabIdx = _tabController?.index ?? 0; return [
                       // Ordenar por
                       PopupMenuItem(enabled: false, height: 28, child: Text('Ordenar por', style: TextStyle(fontSize: 11, color: colors.textoMuted, fontWeight: FontWeight.w600))),
                       _buildOrdenItem('mi_orden', 'Mi orden', _ordenActual, colors),
@@ -542,13 +542,13 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
                       _buildOrdenItem('titulo', 'Título', _ordenActual, colors),
                       _buildOrdenItem('experiencia', 'Experiencia', _ordenActual, colors),
                       const PopupMenuDivider(),
-                      if (_tabIndex > 0) ...[
+                      if (tabIdx > 0) ...[
                         PopupMenuItem(value: 'renombrar', child: Text('Cambiar nombre de la lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
                         PopupMenuItem(value: 'eliminar_lista', child: Text('Eliminar lista', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
                         const PopupMenuDivider(),
                       ],
                       PopupMenuItem(value: 'borrar_completadas', child: Text('Borrar todas las tareas completadas', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))),
-                    ],
+                    ]; }
                   ),
                 ],
               ),
