@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/themes/app_themes.dart';
 import '../../core/themes/theme_provider.dart';
+import '../../core/models/producto_model.dart';
 
 class StoreScreen extends ConsumerWidget {
   const StoreScreen({super.key});
@@ -23,7 +24,7 @@ class StoreScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // CUADRANTE 1: Header
+            // CUADRANTE 1: Header zorrito
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
@@ -35,33 +36,28 @@ class StoreScreen extends ConsumerWidget {
                 children: [
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    child: Image.asset(
-                      'assets/images/tienda_zorrito.jpg',
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox(height: 120),
-                    ),
+                    child: Image.asset('assets/images/tienda_zorrito.jpg',
+                      width: double.infinity, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox(height: 120)),
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                    child: Column(
-                      children: [
-                        Text('Tienda de Artículos',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: colors.textoPrincipal),
-                          textAlign: TextAlign.center),
-                        const SizedBox(height: 6),
-                        Text('Productos directos desde la Pleroma',
-                          style: TextStyle(fontSize: 13, color: colors.textoSecundario),
-                          textAlign: TextAlign.center),
-                      ],
-                    ),
+                    child: Column(children: [
+                      Text('Tienda de Artículos',
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: colors.textoPrincipal),
+                        textAlign: TextAlign.center),
+                      const SizedBox(height: 6),
+                      Text('Productos directos desde la Pleroma',
+                        style: TextStyle(fontSize: 13, color: colors.textoSecundario),
+                        textAlign: TextAlign.center),
+                    ]),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
 
-            // CUADRANTE 2: Productos - Remeras
+            // CUADRANTE 2: Artículos (todos mezclados)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -72,35 +68,27 @@ class StoreScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Remeras', style: TextStyle(fontSize: 13, color: colors.textoMuted, fontWeight: FontWeight.w500)),
+                  Text('Artículos', style: TextStyle(fontSize: 13, color: colors.textoMuted, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 12),
                   SizedBox(
                     height: 240,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
-                      itemCount: 5,
+                      itemCount: catalogoCompleto.length,
                       separatorBuilder: (_, __) => const SizedBox(width: 10),
                       itemBuilder: (_, i) {
-                        final num = (i + 1).toString().padLeft(2, '0');
+                        final producto = catalogoCompleto[i];
                         return GestureDetector(
                           onTap: () => Navigator.push(context, MaterialPageRoute(
-                            builder: (_) => _ProductoDetalleScreen(
-                              imagePath: 'assets/images/remeras/$num.jpg',
-                              colors: colors,
-                            ),
-                          )),
+                            builder: (_) => _ProductoDetalleScreen(producto: producto, colors: colors))),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: AspectRatio(
                               aspectRatio: 4 / 5,
-                              child: Image.asset(
-                                'assets/images/remeras/$num.jpg',
-                                fit: BoxFit.cover,
+                              child: Image.asset(producto.imagePath, fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Container(
                                   color: colors.fondoPrincipal,
-                                  child: Center(child: Icon(Icons.image_outlined, color: colors.textoMuted, size: 32)),
-                                ),
-                              ),
+                                  child: Center(child: Icon(Icons.image_outlined, color: colors.textoMuted, size: 32)))),
                             ),
                           ),
                         );
@@ -112,7 +100,7 @@ class StoreScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            // CUADRANTE 3: Categorías
+            // CUADRANTE 3: Categorías — navegan a pantalla propia
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -132,20 +120,13 @@ class StoreScreen extends ConsumerWidget {
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
                     childAspectRatio: 1,
-                    children: [
-                      _CategoriaItem(icon: Icons.checkroom, label: 'Remeras', colors: colors,
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _CategoriaScreen(titulo: 'Remeras', colors: colors)))),
-                      _CategoriaItem(icon: Icons.back_hand_outlined, label: 'Hoodies', colors: colors,
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _CategoriaScreen(titulo: 'Hoodies', colors: colors)))),
-                      _CategoriaItem(icon: Icons.sports_martial_arts, label: 'Joggings', colors: colors,
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _CategoriaScreen(titulo: 'Joggings', colors: colors)))),
-                      _CategoriaItem(icon: Icons.sports_baseball, label: 'Gorras', colors: colors,
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _CategoriaScreen(titulo: 'Gorras', colors: colors)))),
-                      _CategoriaItem(icon: Icons.menu_book_outlined, label: 'Libros', colors: colors,
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _CategoriaScreen(titulo: 'Libros', colors: colors)))),
-                      _CategoriaItem(icon: Icons.auto_fix_high, label: 'Artefactos', colors: colors,
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _CategoriaScreen(titulo: 'Artefactos', colors: colors)))),
-                    ],
+                    children: CategoriaProducto.values.map((cat) => _CategoriaItem(
+                      icon: _iconForCategoria(cat),
+                      label: cat.nombre,
+                      colors: colors,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => _CategoriaScreen(categoria: cat, colors: colors))),
+                    )).toList(),
                   ),
                 ],
               ),
@@ -155,6 +136,17 @@ class StoreScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  IconData _iconForCategoria(CategoriaProducto cat) {
+    switch (cat) {
+      case CategoriaProducto.remera: return Icons.checkroom;
+      case CategoriaProducto.hoodie: return Icons.back_hand_outlined;
+      case CategoriaProducto.jogging: return Icons.sports_martial_arts;
+      case CategoriaProducto.gorra: return Icons.sports_baseball;
+      case CategoriaProducto.libro: return Icons.menu_book_outlined;
+      case CategoriaProducto.artefacto: return Icons.auto_fix_high;
+    }
   }
 }
 
@@ -188,38 +180,62 @@ class _CategoriaItem extends StatelessWidget {
   }
 }
 
+// Pantalla de categoría con productos
 class _CategoriaScreen extends StatelessWidget {
-  final String titulo;
+  final CategoriaProducto categoria;
   final AppColors colors;
-  const _CategoriaScreen({required this.titulo, required this.colors});
+  const _CategoriaScreen({required this.categoria, required this.colors});
 
   @override
   Widget build(BuildContext context) {
+    final productos = catalogoCompleto.where((p) => p.categoria == categoria).toList();
+
     return Scaffold(
       backgroundColor: colors.fondoPrincipal,
       appBar: AppBar(
         backgroundColor: colors.fondoHeader,
-        title: Text(titulo, style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
+        title: Text(categoria.nombre, style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
         leading: IconButton(icon: Icon(Icons.arrow_back, color: colors.textoPrincipal), onPressed: () => Navigator.pop(context)),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.construction, color: colors.textoMuted, size: 48),
-            const SizedBox(height: 16),
-            Text('$titulo — Próximamente', style: TextStyle(fontSize: 16, color: colors.textoMuted)),
-          ],
-        ),
-      ),
+      body: productos.isEmpty
+          ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(Icons.construction, color: colors.textoMuted, size: 48),
+              const SizedBox(height: 16),
+              Text('${categoria.nombre} — Próximamente', style: TextStyle(fontSize: 16, color: colors.textoMuted)),
+            ]))
+          : GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 4 / 5,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: productos.length,
+              itemBuilder: (_, i) {
+                final producto = productos[i];
+                return GestureDetector(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => _ProductoDetalleScreen(producto: producto, colors: colors))),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(producto.imagePath, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: colors.fondoSuperficie,
+                        child: Center(child: Icon(Icons.image_outlined, color: colors.textoMuted, size: 32)))),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
 
+// Detalle de producto
 class _ProductoDetalleScreen extends StatelessWidget {
-  final String imagePath;
+  final ProductoModel producto;
   final AppColors colors;
-  const _ProductoDetalleScreen({required this.imagePath, required this.colors});
+  const _ProductoDetalleScreen({required this.producto, required this.colors});
 
   @override
   Widget build(BuildContext context) {
@@ -227,24 +243,30 @@ class _ProductoDetalleScreen extends StatelessWidget {
       backgroundColor: colors.fondoPrincipal,
       appBar: AppBar(
         backgroundColor: colors.fondoHeader,
+        title: Text(producto.nombre, style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
         leading: IconButton(icon: Icon(Icons.arrow_back, color: colors.textoPrincipal), onPressed: () => Navigator.pop(context)),
       ),
       body: Column(
         children: [
           Expanded(
-            child: Image.asset(imagePath, fit: BoxFit.contain,
+            child: Image.asset(producto.imagePath, fit: BoxFit.contain,
               errorBuilder: (_, __, ___) => Center(child: Icon(Icons.image_outlined, color: colors.textoMuted, size: 48))),
           ),
-          Padding(
+          Container(
             padding: const EdgeInsets.all(20),
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                backgroundColor: colors.acentoPrimario,
+            decoration: BoxDecoration(color: colors.fondoSuperficie, border: Border(top: BorderSide(color: colors.bordeSutil, width: 0.5))),
+            child: Column(children: [
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Expanded(child: Text(producto.nombre, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textoPrincipal))),
+                Text('\$${producto.precio.toStringAsFixed(0)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.acentoPrimario)),
+              ]),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: colors.acentoPrimario),
+                child: const Text('Comprar — Próximamente', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
-              child: const Text('Comprar — Próximamente', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            ),
+            ]),
           ),
         ],
       ),
