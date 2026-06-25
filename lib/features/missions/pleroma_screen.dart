@@ -28,9 +28,14 @@ class PleromaScreen extends ConsumerStatefulWidget {
 
 class _PleromaScreenState extends ConsumerState<PleromaScreen> {
   int? _levelUpNivel;
+  bool _esSubida = true;
   String? _selectedSizigiaId;
 
-  void _mostrarLevelUp(int nivel) => setState(() => _levelUpNivel = nivel);
+  void _mostrarLevelUp(int nivel, {bool subida = true}) => setState(() { _levelUpNivel = nivel.abs(); _esSubida = subida; });
+  void _handleLevelChange(int nivel) {
+    if (nivel < 0) _mostrarLevelUp(nivel.abs(), subida: false);
+    else _mostrarLevelUp(nivel, subida: true);
+  }
   void _ocultarLevelUp() => setState(() => _levelUpNivel = null);
 
   @override
@@ -69,7 +74,7 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
                 pleromi: pleromi,
                 colors: colors,
                 userId: uid,
-                onLevelUp: _mostrarLevelUp,
+                onLevelUp: _handleLevelChange,
                 onAddMision: (sizigiaId) => _showAddMision(context, colors, uid, sizigiaId: sizigiaId),
                 onAddSizigia: () => _showAddSizigia(context, colors, pleromi.id),
                 onSizigiaSelected: (id) => setState(() => _selectedSizigiaId = id),
@@ -79,7 +84,7 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
         ),
         if (_levelUpNivel != null)
           Positioned.fill(
-            child: LevelUpOverlay(nuevoNivel: _levelUpNivel!, onDismiss: _ocultarLevelUp),
+            child: LevelUpOverlay(nuevoNivel: _levelUpNivel!, onDismiss: _ocultarLevelUp, colors: AppColors.gnostico, esSubida: _esSubida),
           ),
       ],
     );
@@ -573,7 +578,7 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
   }
 }
 
-class _MisionList extends StatelessWidget {
+class _MisionList extends StatefulWidget {
   final PleromiModel pleromi;
   final AppColors colors;
   final String userId;
@@ -585,20 +590,37 @@ class _MisionList extends StatelessWidget {
   const _MisionList({required this.pleromi, required this.colors, required this.userId, required this.onLevelUp, required this.selectedSizigiaId, required this.sizigias, this.ordenActual = 'fecha'});
 
   @override
+  State<_MisionList> createState() => _MisionListState();
+}
+
+class _MisionListState extends State<_MisionList> {
+  final Map<String, Stream<QuerySnapshot>> _streamCache = {};
+
+  Stream<QuerySnapshot> _getStream(String pleromiId, String sizigiaId) {
+    final key = '$pleromiId/$sizigiaId';
+    return _streamCache.putIfAbsent(key, () =>
+      FirebaseFirestore.instance
+        .collection('pleromos').doc(pleromiId)
+        .collection('sizigias').doc(sizigiaId)
+        .collection('misiones').snapshots()
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final filtradas = selectedSizigiaId != null
-        ? sizigias.where((s) => s.id == selectedSizigiaId).toList()
-        : sizigias;
+    final filtradas = widget.selectedSizigiaId != null
+        ? widget.sizigias.where((s) => s.id == widget.selectedSizigiaId).toList()
+        : widget.sizigias;
 
     // Si es "Todas" (selectedSizigiaId == null), agrupamos completadas globalmente
-    if (selectedSizigiaId == null) {
+    if (widget.selectedSizigiaId == null) {
       return _AllMisionsList(
-        pleromi: pleromi,
+        pleromi: widget.pleromi,
         sizigias: filtradas,
-        colors: colors,
-        userId: userId,
-        onLevelUp: onLevelUp,
-        ordenActual: ordenActual,
+        colors: widget.colors,
+        userId: widget.userId,
+        onLevelUp: widget.onLevelUp,
+        ordenActual: widget.ordenActual,
       );
     }
 
@@ -606,7 +628,7 @@ class _MisionList extends StatelessWidget {
       padding: const EdgeInsets.only(top: 8),
       children: filtradas.map((siz) => StreamBuilder(
         stream: FirebaseFirestore.instance
-            .collection('pleromos').doc(pleromi.id)
+            .collection('pleromos').doc(widget.pleromi.id)
             .collection('sizigias').doc(siz.id)
             .collection('misiones').snapshots(),
         builder: (context, misSnap) {
@@ -617,12 +639,12 @@ class _MisionList extends StatelessWidget {
           return _MisionGroup(
             pendientes: pendientes,
             completadas: completadas,
-            pleromiId: pleromi.id,
+            pleromiId: widget.pleromi.id,
             sizigiaId: siz.id,
-            userId: userId,
-            colors: colors,
-            onLevelUp: onLevelUp,
-            ordenActual: ordenActual,
+            userId: widget.userId,
+            colors: widget.colors,
+            onLevelUp: widget.onLevelUp,
+            ordenActual: widget.ordenActual,
           );
         },
       )).toList(),
@@ -987,9 +1009,23 @@ class _MisionCard extends ConsumerWidget {
               GestureDetector(
                 onTap: () async {
                   if (mision.completada) {
-                    await ref.read(firestoreServiceProvider).desmarcarMision(pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
+                    final levelDown = await ref.read(firestoreServiceProvider).desmarcarMision(
+                      userId: userId, pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
+                    if (levelDown) {
+                      final userSnap = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+                      final nivel = userSnap.data()?['nivel'] ?? 1;
+                      onLevelUp(-nivel);
+                    }
                   } else {
-                    await ref.read(firestoreServiceProvider).completarMision(userId: userId, pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
+                    // Mostrar toast ANTES del await — context seguro
+                    _mostrarXPToast(context, mision.xpRecompensa);
+                    final leveledUp = await ref.read(firestoreServiceProvider).completarMision(
+                      userId: userId, pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
+                    if (leveledUp && context.mounted) {
+                      final userSnap = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+                      final nivel = userSnap.data()?['nivel'] ?? 1;
+                      onLevelUp(nivel);
+                    }
                   }
                 },
                 child: Container(
@@ -1044,6 +1080,27 @@ class _MisionCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+void _mostrarXPToast(BuildContext context, int xp) {
+  if (xp <= 0) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text('+$xp XP ⚡', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        ],
+      ),
+      backgroundColor: const Color(0xFF8833ff),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+      duration: const Duration(milliseconds: 1500),
+      margin: const EdgeInsets.only(bottom: 100, left: 80, right: 80),
+      elevation: 8,
+    ),
+  );
 }
 
 class _InfoRow extends StatelessWidget {
