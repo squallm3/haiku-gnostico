@@ -83,6 +83,34 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
     );
   }
 
+  Future<void> _completar(BuildContext context) async {
+    final colors = AppColors.fromTema(ref.read(themeProvider));
+    // Mostrar XP toast antes del await
+    if (widget.mision.xpRecompensa > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [Text('+${widget.mision.xpRecompensa} XP ⚡', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))],
+          ),
+          backgroundColor: const Color(0xFF8833ff),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          duration: const Duration(milliseconds: 1500),
+          margin: const EdgeInsets.only(bottom: 80, left: 60, right: 60),
+          elevation: 8,
+        ),
+      );
+    }
+    final leveledUp = await ref.read(firestoreServiceProvider).completarMision(
+      userId: widget.userId,
+      pleromiId: widget.pleromiId,
+      sizigiaId: widget.sizigiaId,
+      misionId: widget.mision.id,
+    );
+    if (context.mounted) Navigator.pop(context, leveledUp ? 'levelup' : 'done');
+  }
+
   Future<void> _eliminar() async {
     final colors = AppColors.fromTema(ref.read(themeProvider));
     final confirm = await showDialog<bool>(
@@ -359,6 +387,20 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
             onPressed: _eliminar,
           ),
         ],
+      ),
+      bottomNavigationBar: widget.mision.completada ? null : SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: ElevatedButton(
+            onPressed: () => _completar(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colors.acentoPrimario,
+              minimumSize: const Size(double.infinity, 52),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: const Text('Marcar como completada', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
