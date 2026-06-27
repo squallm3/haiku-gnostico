@@ -133,9 +133,11 @@ class ProfileScreen extends ConsumerWidget {
                         width: 90, height: 90,
                         decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: colors.bordePrincipal, width: 2)),
                         child: ClipOval(
-                          child: user.photoURL != null
-                              ? Image.network(user.photoURL!, fit: BoxFit.cover)
-                              : Image.asset('assets/images/zorro.png', fit: BoxFit.cover),
+                          child: Image.asset(
+                            'assets/images/nivel_${nivel < 10 ? '0$nivel' : '$nivel'}_a.jpg',
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Image.asset('assets/images/zorro.png', fit: BoxFit.cover),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -195,9 +197,9 @@ class ProfileScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
-                      Expanded(child: _ImagenNivelCard(nivel: nivel, slot: 'a', colors: colors)),
+                      Expanded(child: _ImagenNivelCard(nivel: nivel, slot: 'a', colors: colors, titulo: titulo, artefacto: artefacto, descripcionArtefacto: getDescripcionArtefacto(nivel) ?? '')),
                       const SizedBox(width: 10),
-                      Expanded(child: _ImagenNivelCard(nivel: nivel, slot: 'b', colors: colors)),
+                      Expanded(child: _ImagenNivelCard(nivel: nivel, slot: 'b', colors: colors, titulo: titulo, artefacto: artefacto, descripcionArtefacto: getDescripcionArtefacto(nivel) ?? '')),
                     ],
                   ),
                 ),
@@ -437,7 +439,10 @@ class _ImagenNivelCard extends StatelessWidget {
   final int nivel;
   final String slot;
   final AppColors colors;
-  const _ImagenNivelCard({required this.nivel, required this.slot, required this.colors});
+  final String titulo;
+  final String artefacto;
+  final String descripcionArtefacto;
+  const _ImagenNivelCard({required this.nivel, required this.slot, required this.colors, this.titulo = '', this.artefacto = '', this.descripcionArtefacto = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -445,16 +450,26 @@ class _ImagenNivelCard extends StatelessWidget {
     final path = 'assets/images/nivel_${nivelStr}_$slot.jpg';
     return Column(
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: AspectRatio(
-            aspectRatio: 4 / 5,
-            child: Image.asset(
-              path,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: colors.fondoPrincipal,
-                child: Center(child: Icon(Icons.image_outlined, color: colors.textoMuted, size: 24)),
+        GestureDetector(
+          onTap: () => Navigator.push(context, MaterialPageRoute(
+            builder: (_) => _ImagenFullScreen(
+              imagePath: path,
+              titulo: slot == 'a' ? titulo : artefacto,
+              subtitulo: slot == 'b' ? descripcionArtefacto : null,
+              colors: colors,
+            ),
+          )),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: AspectRatio(
+              aspectRatio: 4 / 5,
+              child: Image.asset(
+                path,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: colors.fondoPrincipal,
+                  child: Center(child: Icon(Icons.image_outlined, color: colors.textoMuted, size: 24)),
+                ),
               ),
             ),
           ),
@@ -479,6 +494,49 @@ class _ImagenNivelCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ImagenFullScreen extends StatelessWidget {
+  final String imagePath;
+  final String titulo;
+  final String? subtitulo;
+  final AppColors colors;
+  const _ImagenFullScreen({required this.imagePath, required this.titulo, required this.colors, this.subtitulo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: Image.asset(imagePath, fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Center(child: Icon(Icons.image_outlined, color: Colors.white38, size: 64))),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            color: Colors.black,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(titulo, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white), textAlign: TextAlign.center),
+                if (subtitulo != null && subtitulo!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(subtitulo!, style: const TextStyle(fontSize: 13, color: Colors.white70, height: 1.5), textAlign: TextAlign.center),
+                ],
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,6 +1,7 @@
 // lib/services/firestore_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/models/user_model.dart';
 import '../core/models/mission_model.dart';
 import '../core/constants/levels.dart';
@@ -33,7 +34,8 @@ class FirestoreService {
   }
 
   // ─── MISIONES / XP ──────────────────────────────────────────
-  Future<bool> completarMision({
+  // Retorna el nuevo nivel si subió de nivel, 0 si no
+  Future<int> completarMision({
     required String userId,
     required String pleromiId,
     required String sizigiaId,
@@ -44,7 +46,7 @@ class FirestoreService {
         .collection('sizigias').doc(sizigiaId)
         .collection('misiones').doc(misionId);
     final userRef = _db.collection('users').doc(userId);
-    bool levelUp = false;
+    int nuevoNivelFinal = 0;
 
     await _db.runTransaction((tx) async {
       final misionSnap = await tx.get(misionRef);
@@ -61,8 +63,9 @@ class FirestoreService {
       final xpAntes = (userData['xpAcumulada'] as int?) ?? 0;
       final nuevaXP = xpAntes + xpMision;
       final nuevoNivel = calcularNivel(nuevaXP);
-      levelUp = nuevoNivel > nivelAntes;
       final nivelData = getNivelData(nuevoNivel);
+
+      if (nuevoNivel > nivelAntes) nuevoNivelFinal = nuevoNivel;
 
       tx.update(misionRef, {'completada': true, 'fechaCompletada': FieldValue.serverTimestamp()});
 
@@ -81,6 +84,9 @@ class FirestoreService {
       }
     });
 
+    // Backup local
+    await _guardarBackupLocal(userId);
+
     // Si tiene repeticion, crear nueva tarea
     final misionDoc = await misionRef.get();
     final data = misionDoc.data() as Map<String, dynamic>?;
@@ -88,7 +94,7 @@ class FirestoreService {
       await _crearTareaRepetida(pleromiId: pleromiId, sizigiaId: sizigiaId, data: data);
     }
 
-    return levelUp;
+    return nuevoNivelFinal;
   }
 
   Future<void> _crearTareaRepetida({
@@ -136,15 +142,53 @@ class FirestoreService {
     });
   }
 
-  Future<void> desmarcarMision({
+  // Retorna el nivel nuevo si bajó de nivel, 0 si no
+  Future<int> desmarcarMision({
+    required String userId,
     required String pleromiId,
     required String sizigiaId,
     required String misionId,
   }) async {
-    await _db.collection('pleromos').doc(pleromiId)
+    final misionRef = _db.collection('pleromos').doc(pleromiId)
         .collection('sizigias').doc(sizigiaId)
-        .collection('misiones').doc(misionId)
-        .update({'completada': false, 'fechaCompletada': null});
+        .collection('misiones').doc(misionId);
+    final userRef = _db.collection('users').doc(userId);
+    int nivelBajadoFinal = 0;
+
+    await _db.runTransaction((tx) async {
+      final misionSnap = await tx.get(misionRef);
+      final userSnap = await tx.get(userRef);
+      if (misionSnap.data()?['completada'] != true) return;
+
+      final xpMision = (misionSnap.data()?['xpRecompensa'] as int?) ?? XP_POR_MISION;
+      final xpAntes = (userSnap.data()?['xpAcumulada'] as int?) ?? 0;
+      final nivelAntes = (userSnap.data()?['nivel'] as int?) ?? 1;
+      final nuevaXP = (xpAntes - xpMision).clamp(0, 999999999);
+      final nuevoNivel = calcularNivel(nuevaXP);
+      if (nuevoNivel < nivelAntes) nivelBajadoFinal = nuevoNivel;
+      final nivelData = getNivelData(nuevoNivel);
+
+      tx.update(misionRef, {'completada': false, 'fechaCompletada': null});
+      tx.update(userRef, {
+        'xpAcumulada': nuevaXP, 'nivel': nuevoNivel,
+        'titulo': nivelData.titulo, 'artefacto': nivelData.artefacto,
+      });
+    });
+
+    // Backup local
+    await _guardarBackupLocal(userId);
+    return nivelBajadoFinal;
+  }
+
+  Future<void> _guardarBackupLocal(String userId) async {
+    try {
+      final userSnap = await _db.collection('users').doc(userId).get();
+      final data = userSnap.data();
+      if (data == null) return;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('xp_$userId', data['xpAcumulada'] ?? 0);
+      await prefs.setInt('nivel_$userId', data['nivel'] ?? 1);
+    } catch (_) {}
   }
 
   Future<void> updateMision({

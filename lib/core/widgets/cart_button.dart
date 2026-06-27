@@ -1,5 +1,6 @@
 // lib/core/widgets/cart_button.dart
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../themes/app_themes.dart';
 import '../providers/cart_provider.dart';
@@ -39,7 +40,7 @@ class CartButton extends ConsumerWidget {
                   const SizedBox(height: 8),
                   if (count == 0 && showStoreLink)
                     GestureDetector(
-                      onTap: () { Navigator.pop(context); },
+                      onTap: () { Navigator.pop(context); context.go('/tienda'); },
                       child: Text('Ir a la tienda →', style: TextStyle(fontSize: 14, color: colors.acentoPrimario, decoration: TextDecoration.underline, decorationColor: colors.acentoPrimario)),
                     ),
                   const SizedBox(height: 24),

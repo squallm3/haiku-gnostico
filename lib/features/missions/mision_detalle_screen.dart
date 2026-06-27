@@ -102,13 +102,13 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
         ),
       );
     }
-    final leveledUp = await ref.read(firestoreServiceProvider).completarMision(
+    final nuevoNivel = await ref.read(firestoreServiceProvider).completarMision(
       userId: widget.userId,
       pleromiId: widget.pleromiId,
       sizigiaId: widget.sizigiaId,
       misionId: widget.mision.id,
     );
-    if (context.mounted) Navigator.pop(context, leveledUp ? 'levelup' : 'done');
+    if (context.mounted) Navigator.pop(context, nuevoNivel > 0 ? 'levelup:$nuevoNivel' : 'done');
   }
 
   Future<void> _eliminar() async {
