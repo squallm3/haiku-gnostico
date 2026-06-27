@@ -1033,21 +1033,20 @@ class _MisionCard extends ConsumerWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: () async {
                   if (mision.completada) {
-                    final levelDown = await ref.read(firestoreServiceProvider).desmarcarMision(
+                    final onLevelUpCapture = onLevelUp;
+                    final nivelBajado = await ref.read(firestoreServiceProvider).desmarcarMision(
                       userId: userId, pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
-                    if (levelDown) {
-                      final userSnap = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-                      final nivel = userSnap.data()?['nivel'] ?? 1;
-                      onLevelUp(-nivel);
+                    if (nivelBajado > 0) {
+                      onLevelUpCapture(-nivelBajado);
                     }
                   } else {
                     _mostrarXPToast(context, mision.xpRecompensa);
-                    final leveledUp = await ref.read(firestoreServiceProvider).completarMision(
+                    // Capturamos callback antes del await para evitar problema de context.mounted
+                    final onLevelUpCapture = onLevelUp;
+                    final nuevoNivel = await ref.read(firestoreServiceProvider).completarMision(
                       userId: userId, pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
-                    if (leveledUp && context.mounted) {
-                      final userSnap = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-                      final nivel = userSnap.data()?['nivel'] ?? 1;
-                      onLevelUp(nivel);
+                    if (nuevoNivel > 0) {
+                      onLevelUpCapture(nuevoNivel);
                     }
                   }
                 },
