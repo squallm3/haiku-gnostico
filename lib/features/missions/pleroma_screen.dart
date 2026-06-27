@@ -1109,23 +1109,80 @@ class _MisionCard extends ConsumerWidget {
 
 void _mostrarXPToast(BuildContext context, int xp) {
   if (xp <= 0) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('+$xp XP ⚡', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-        ],
+  final overlay = Overlay.of(context);
+  late OverlayEntry entry;
+  entry = OverlayEntry(builder: (_) => _XPToast(xp: xp, onDone: () {
+    if (entry.mounted) entry.remove();
+  }));
+  overlay.insert(entry);
+}
+
+class _XPToast extends StatefulWidget {
+  final int xp;
+  final VoidCallback onDone;
+  const _XPToast({required this.xp, required this.onDone});
+  @override
+  State<_XPToast> createState() => _XPToastState();
+}
+
+class _XPToastState extends State<_XPToast> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _opacity;
+  late Animation<Offset> _position;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
+    _opacity = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 15),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 55),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+    ]).animate(_ctrl);
+    _position = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: const Offset(0, 0.5), end: Offset.zero).chain(CurveTween(curve: Curves.easeOutBack)), weight: 25),
+      TweenSequenceItem(tween: Tween(begin: Offset.zero, end: const Offset(0, -0.3)), weight: 75),
+    ]).animate(_ctrl);
+    _scale = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 0.6, end: 1.1).chain(CurveTween(curve: Curves.easeOut)), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 1.1, end: 1.0), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 70),
+    ]).animate(_ctrl);
+    _ctrl.forward().then((_) => widget.onDone());
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 130, left: 0, right: 0,
+      child: IgnorePointer(
+        child: FadeTransition(
+          opacity: _opacity,
+          child: SlideTransition(
+            position: _position,
+            child: ScaleTransition(
+              scale: _scale,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFF6611dd), Color(0xFFaa44ff)]),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [BoxShadow(color: const Color(0xFF8833ff).withValues(alpha: 0.6), blurRadius: 20, spreadRadius: 2)],
+                  ),
+                  child: Text('+${widget.xp} XP ⚡', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
-      backgroundColor: const Color(0xFF8833ff),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-      duration: const Duration(milliseconds: 1500),
-      margin: const EdgeInsets.only(bottom: 100, left: 80, right: 80),
-      elevation: 8,
-    ),
-  );
+    );
+  }
 }
 
 class _InfoRow extends StatelessWidget {
