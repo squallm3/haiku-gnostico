@@ -49,11 +49,6 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
       children: [
         Scaffold(
           backgroundColor: colors.fondoPrincipal,
-          floatingActionButton: _selectedSizigiaId != null ? FloatingActionButton(
-            onPressed: () => _showAddMision(context, colors, uid, sizigiaId: _selectedSizigiaId),
-            backgroundColor: colors.acentoPrimario,
-            child: const Icon(Icons.add, color: Colors.white),
-          ) : null,
           appBar: AppBar(
             title: Text('Misiones', style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
             actions: [CartButton(colors: colors)],
@@ -379,7 +374,34 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
         if (_tabController == null) return const SizedBox.shrink();
 
         final selectedSizigiaId = _tabIndex == 0 ? null : sizigias[_tabIndex - 1].id;
-        return Column(
+        return Scaffold(
+          backgroundColor: colors.fondoPrincipal,
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              if (_tabIndex > 0 && _tabIndex <= sizigias.length) {
+                widget.onAddMision(sizigias[_tabIndex - 1].id);
+              } else {
+                final first = sizigias.isNotEmpty ? sizigias.first : null;
+                if (first == null) return;
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: colors.fondoSuperficie,
+                    title: Text('Agregar tarea', style: TextStyle(color: colors.textoPrincipal)),
+                    content: Text('Estás en "Todas". La tarea se cargará en "${first['nombre'] ?? 'primera lista'}".',
+                      style: TextStyle(color: colors.textoSecundario)),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancelar', style: TextStyle(color: colors.textoMuted))),
+                      ElevatedButton(onPressed: () { Navigator.pop(ctx); widget.onAddMision(first.id); }, child: const Text('Continuar')),
+                    ],
+                  ),
+                );
+              }
+            },
+            backgroundColor: colors.acentoPrimario,
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+          body: Column(
           children: [
             // TabBar estilo Material
             Container(
@@ -572,6 +594,7 @@ class _MisionesConTabsState extends State<_MisionesConTabs> with TickerProviderS
               ),
             ),
           ],
+          ),
         );
       },
     );
@@ -1007,6 +1030,7 @@ class _MisionCard extends ConsumerWidget {
           child: Row(
             children: [
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () async {
                   if (mision.completada) {
                     final levelDown = await ref.read(firestoreServiceProvider).desmarcarMision(
@@ -1017,7 +1041,6 @@ class _MisionCard extends ConsumerWidget {
                       onLevelUp(-nivel);
                     }
                   } else {
-                    // Mostrar toast ANTES del await — context seguro
                     _mostrarXPToast(context, mision.xpRecompensa);
                     final leveledUp = await ref.read(firestoreServiceProvider).completarMision(
                       userId: userId, pleromiId: pleromiId, sizigiaId: sizigiaId, misionId: mision.id);
@@ -1028,15 +1051,18 @@ class _MisionCard extends ConsumerWidget {
                     }
                   }
                 },
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: mision.completada ? colors.acentoPrimario : Colors.transparent,
-                    border: Border.all(color: mision.completada ? colors.acentoPrimario : colors.bordeSutil, width: 2),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: mision.completada ? colors.acentoPrimario : Colors.transparent,
+                      border: Border.all(color: mision.completada ? colors.acentoPrimario : colors.bordeSutil, width: 2),
+                    ),
+                    child: mision.completada ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
                   ),
-                  child: mision.completada ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
                 ),
               ),
               const SizedBox(width: 12),
