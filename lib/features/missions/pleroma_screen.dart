@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../core/themes/app_themes.dart';
@@ -51,7 +52,18 @@ class _PleromaScreenState extends ConsumerState<PleromaScreen> {
           backgroundColor: colors.fondoPrincipal,
           appBar: AppBar(
             title: Text('Misiones', style: TextStyle(color: colors.textoPrincipal, fontWeight: FontWeight.w500)),
-            actions: [CartButton(colors: colors)],
+            actions: [
+              CartButton(colors: colors),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.settings_outlined, color: colors.textoSecundario),
+                color: colors.fondoSuperficie,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.bordeSutil, width: 0.5)),
+                onSelected: (value) { if (value == 'salir') context.go('/saliendo'); },
+                itemBuilder: (_) => [
+                  PopupMenuItem(value: 'salir', child: Row(children: [Icon(Icons.logout, size: 16, color: colors.textoSecundario), const SizedBox(width: 10), Text('Salir', style: TextStyle(color: colors.textoPrincipal, fontSize: 14))])),
+                ],
+              ),
+            ],
           ),
           body: pleromiAsync.when(
             loading: () => Center(child: CircularProgressIndicator(color: colors.acentoPrimario)),
