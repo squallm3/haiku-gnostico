@@ -223,7 +223,13 @@ class ProfileScreen extends ConsumerWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
-                          value: xpFalta > 0 ? (xp / xpSigNivel).clamp(0.0, 1.0) : 1.0,
+                          value: () {
+                            final xpNivelActual = calcularXPParaNivel(nivel);
+                            final xpNivelSig = xpSigNivel;
+                            final rango = xpNivelSig - xpNivelActual;
+                            if (rango <= 0) return 1.0;
+                            return ((xp - xpNivelActual) / rango).clamp(0.0, 1.0);
+                          }(),
                           backgroundColor: colors.bordeSutil,
                           valueColor: AlwaysStoppedAnimation(colors.acentoPrimario),
                           minHeight: 5,
