@@ -1,6 +1,7 @@
 // lib/features/missions/levelup_overlay.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/constants/levels.dart';
 import '../../core/themes/app_themes.dart';
 
@@ -153,6 +154,14 @@ class _LevelUpOverlayState extends State<LevelUpOverlay> with SingleTickerProvid
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
                     child: const Text('Continuar ⚡', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () {
+                      widget.onDismiss();
+                      context.go('/tienda');
+                    },
+                    child: Text('Ver tienda →', style: TextStyle(fontSize: 15, color: colors.acentoSecundario, decoration: TextDecoration.underline, decorationColor: colors.acentoSecundario)),
                   ),
                 ],
 

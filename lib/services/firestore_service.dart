@@ -221,7 +221,9 @@ class FirestoreService {
         .collection('sizigias')
         .snapshots()
         .map((s) {
-          final list = s.docs.map(SizigiaModel.fromFirestore).toList();
+          // Filtrar documentos pendientes de confirmación (sin creadoEn = escritura optimista)
+          final docs = s.docs.where((d) => d.metadata.hasPendingWrites == false || d.data()['creadoEn'] != null).toList();
+          final list = docs.map(SizigiaModel.fromFirestore).toList();
           list.sort((a, b) {
             final ao = a.orden;
             final bo = b.orden;
