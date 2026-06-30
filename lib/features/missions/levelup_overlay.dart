@@ -1,7 +1,11 @@
 // lib/features/missions/levelup_overlay.dart
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../core/constants/levels.dart';
 import '../../core/themes/app_themes.dart';
 
@@ -28,8 +32,36 @@ class _LevelUpOverlayState extends State<LevelUpOverlay> with SingleTickerProvid
   Timer? _timer;
   late AnimationController _ctrl;
   late Animation<double> _fade;
+  bool _compartiendo = false;
 
   final int _totalSlides = 5;
+
+  Future<void> _compartirEnRedes() async {
+    setState(() => _compartiendo = true);
+    try {
+      final nivelStr = widget.nuevoNivel < 10 ? '0${widget.nuevoNivel}' : '${widget.nuevoNivel}';
+      final nivelData = getNivelData(widget.nuevoNivel);
+
+      // Cargar la imagen A directamente desde assets
+      final byteData = await rootBundle.load('assets/images/nivel_${nivelStr}_a.jpg');
+      final bytes = byteData.buffer.asUint8List();
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/nivel_${widget.nuevoNivel}_share.jpg');
+      await file.writeAsBytes(bytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Alcancé el nivel ${widget.nuevoNivel} y obtuve ${nivelData.artefacto}. El camino de la gnosis no se detiene. 🦊✨ #HaikuGnostico',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al compartir: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _compartiendo = false);
+    }
+  }
 
   @override
   void initState() {
@@ -156,12 +188,25 @@ class _LevelUpOverlayState extends State<LevelUpOverlay> with SingleTickerProvid
                     child: const Text('Continuar ⚡', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                   const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () {
-                      widget.onDismiss();
-                      context.go('/tienda');
-                    },
-                    child: Text('Ver tienda →', style: TextStyle(fontSize: 15, color: colors.acentoSecundario, decoration: TextDecoration.underline, decorationColor: colors.acentoSecundario)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _compartiendo ? null : _compartirEnRedes,
+                        icon: _compartiendo
+                          ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: colors.acentoSecundario))
+                          : Icon(Icons.share_outlined, size: 16, color: colors.acentoSecundario),
+                        label: Text('Compartir', style: TextStyle(fontSize: 14, color: colors.acentoSecundario)),
+                      ),
+                      Text('  ·  ', style: TextStyle(color: colors.bordeSutil)),
+                      TextButton(
+                        onPressed: () {
+                          widget.onDismiss();
+                          context.go('/tienda');
+                        },
+                        child: Text('Ver tienda →', style: TextStyle(fontSize: 14, color: colors.acentoSecundario, decoration: TextDecoration.underline, decorationColor: colors.acentoSecundario)),
+                      ),
+                    ],
                   ),
                 ],
 
