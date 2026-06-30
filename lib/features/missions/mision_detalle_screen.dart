@@ -43,6 +43,7 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
   final _xpOpciones = const [
     {'label': 'No lo merezco', 'xp': 0},
     {'label': 'Un poquito', 'xp': 111},
+    {'label': 'Un Algo', 'xp': 222},
     {'label': 'Un toco', 'xp': 333},
     {'label': 'Una bandaaa', 'xp': 777},
   ];
