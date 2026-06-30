@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/themes/app_themes.dart';
 import '../../core/themes/theme_provider.dart';
+import '../../services/notification_service.dart';
 import '../../core/models/mission_model.dart';
 import '../../services/firestore_service.dart';
 import 'repeticion_screen.dart';
@@ -81,6 +82,23 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
       misionId: widget.mision.id,
       fields: fields,
     );
+    // Si se guardó fecha y hora, programar notificación
+    if (fields.containsKey('fecha') || fields.containsKey('hora') || fields.containsKey('horaActivada')) {
+      final fechaRaw = fields['fecha'];
+      final DateTime? fecha = fechaRaw is Timestamp ? fechaRaw.toDate() : (fechaRaw as DateTime?) ?? widget.mision.fecha;
+      final horaActivada = fields['horaActivada'] as bool? ?? widget.mision.horaActivada;
+      final hora = fields['hora'] as String? ?? widget.mision.hora;
+      if (fecha != null && horaActivada && hora != null) {
+        await NotificationService().programarNotificacion(
+          misionId: widget.mision.id,
+          titulo: widget.mision.titulo,
+          fecha: fecha,
+          hora: hora,
+        );
+      } else if (fields.containsKey('fecha') && fields['fecha'] == null) {
+        await NotificationService().cancelarNotificacion(widget.mision.id);
+      }
+    }
   }
 
   Future<void> _completar(BuildContext context) async {
@@ -111,6 +129,16 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
     if (context.mounted) Navigator.pop(context, nuevoNivel > 0 ? 'levelup:$nuevoNivel' : 'done');
   }
 
+  Future<void> _desmarcar(BuildContext context) async {
+    final nivelBajado = await ref.read(firestoreServiceProvider).desmarcarMision(
+      userId: widget.userId,
+      pleromiId: widget.pleromiId,
+      sizigiaId: widget.sizigiaId,
+      misionId: widget.mision.id,
+    );
+    if (context.mounted) Navigator.pop(context, nivelBajado > 0 ? 'leveldown:$nivelBajado' : 'desmarcada');
+  }
+
   Future<void> _eliminar() async {
     final colors = AppColors.fromTema(ref.read(themeProvider));
     final confirm = await showDialog<bool>(
@@ -126,6 +154,7 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
       ),
     );
     if (confirm == true) {
+      await NotificationService().cancelarNotificacion(widget.mision.id);
       await FirebaseFirestore.instance
           .collection('pleromos').doc(widget.pleromiId)
           .collection('sizigias').doc(widget.sizigiaId)
@@ -388,18 +417,28 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: widget.mision.completada ? null : SafeArea(
+      bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: ElevatedButton(
-            onPressed: () => _completar(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colors.acentoPrimario,
-              minimumSize: const Size(double.infinity, 52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text('Marcar como completada', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
-          ),
+          child: widget.mision.completada
+            ? ElevatedButton(
+                onPressed: () => _desmarcar(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.acentoPrimario,
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: const Text('Desmarcar tarea', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+              )
+            : ElevatedButton(
+                onPressed: () => _completar(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.acentoPrimario,
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: const Text('Marcar como completada', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+              ),
         ),
       ),
       body: ListView(
