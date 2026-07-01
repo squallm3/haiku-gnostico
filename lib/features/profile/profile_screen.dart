@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/themes/app_themes.dart';
 import '../../core/themes/theme_provider.dart';
+import 'mis_datos_screen.dart';
 import '../../core/constants/levels.dart';
 import '../../core/widgets/cart_button.dart';
 
@@ -99,7 +100,7 @@ class ProfileScreen extends ConsumerWidget {
               if (value == 'misdatos') {
                 final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
                 Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => _MisDatosScreen(userId: userId, colors: colors)));
+                  builder: (_) => MisDatosScreen(userId: userId)));
               }
               if (value == 'password') _showPasswordDialog(context, colors, user.uid);
             },
