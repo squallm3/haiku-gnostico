@@ -1244,7 +1244,11 @@ class _InfoRow extends StatelessWidget {
 
     final completadas = mision.subtareas.where((s) => s.completada).length;
     final total = mision.subtareas.length;
+    final now = DateTime.now();
+    final fechaVencida = mision.fecha != null && !mision.completada &&
+        mision.fecha!.isBefore(DateTime(now.year, now.month, now.day));
     final color = colors.textoMuted;
+    final fechaColor = fechaVencida ? Colors.redAccent : color;
 
     return Padding(
       padding: const EdgeInsets.only(top: 4),
@@ -1255,10 +1259,16 @@ class _InfoRow extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (mision.fecha != null) ...[
-                Text(_formatFecha(mision.fecha!), style: TextStyle(fontSize: 11, color: color)),
+                Container(
+                  decoration: fechaVencida ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [BoxShadow(color: Colors.redAccent.withValues(alpha: 0.4), blurRadius: 6, spreadRadius: 1)],
+                  ) : null,
+                  child: Text(_formatFecha(mision.fecha!), style: TextStyle(fontSize: 11, color: fechaColor, fontWeight: fechaVencida ? FontWeight.w600 : FontWeight.normal)),
+                ),
                 if (mision.horaActivada && mision.hora != null) ...[
                   const SizedBox(width: 4),
-                  Text(mision.hora!, style: TextStyle(fontSize: 11, color: color)),
+                  Text(mision.hora!, style: TextStyle(fontSize: 11, color: fechaColor)),
                 ],
               ],
               if (mision.repeticion != null) ...[
