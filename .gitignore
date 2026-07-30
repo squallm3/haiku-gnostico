@@ -12,14 +12,12 @@ build/
 .idea/
 *.code-workspace
 
-# Android
-android/
-app/
-build.gradle.kts
-gradle.properties
-gradle/
-settings.gradle.kts
-local.properties
+# Android (solo lo generado/local, NO todo el folder)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/key.properties
 *.keystore
 *.jks
 
@@ -32,6 +30,11 @@ linux/
 windows/
 web/
 
+# Firebase Functions (Node.js)
+functions/node_modules/
+functions/lib/
+npm-debug.log*
+
 # Misc
 .metadata
 .DS_Store
@@ -39,6 +42,3 @@ web/
 pubspec.lock
 flutter_*.png
 gitignore.txt
-
-# Test
-test/

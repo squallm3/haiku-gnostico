@@ -1,0 +1,76 @@
+{
+  "project_info": {
+    "project_number": "53950811543",
+    "project_id": "lista-de-tareas-gnostica",
+    "storage_bucket": "lista-de-tareas-gnostica.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:53950811543:android:c27cd3a5b48db20dae48d2",
+        "android_client_info": {
+          "package_name": "com.escuelahaikusgnosticos.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "53950811543-tqrrvntac75rlhirgd0m932gklilqg45.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.escuelahaikusgnosticos.app",
+            "certificate_hash": "92feffce6bc0483a164ccd000973a9ad38fd9f37"
+          }
+        },
+        {
+          "client_id": "53950811543-1k6jrr20ij2q900ackj1g8tq9886fhs2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALpqlN3wXV-RKPFMoLg9cHCHWBr-2K0q4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "53950811543-1k6jrr20ij2q900ackj1g8tq9886fhs2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:53950811543:android:1812322ac97beb08ae48d2",
+        "android_client_info": {
+          "package_name": "com.example.haiku_gnostico"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "53950811543-1k6jrr20ij2q900ackj1g8tq9886fhs2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALpqlN3wXV-RKPFMoLg9cHCHWBr-2K0q4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "53950811543-1k6jrr20ij2q900ackj1g8tq9886fhs2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
