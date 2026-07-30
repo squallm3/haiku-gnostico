@@ -82,6 +82,7 @@ class _MisionDetalleScreenState extends ConsumerState<MisionDetalleScreen> {
       sizigiaId: widget.sizigiaId,
       misionId: widget.mision.id,
       fields: fields,
+      userId: widget.userId,
     );
     // Si se guardó fecha y hora, programar notificación
     if (fields.containsKey('fecha') || fields.containsKey('hora') || fields.containsKey('horaActivada')) {

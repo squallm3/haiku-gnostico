@@ -196,11 +196,32 @@ class FirestoreService {
     required String sizigiaId,
     required String misionId,
     required Map<String, dynamic> fields,
+    String? userId,
   }) async {
+    final updatedFields = Map<String, dynamic>.from(fields);
+
+    // Si se está guardando fecha y hora, calcular fechaNotificacion para FCM
+    if (fields.containsKey('fecha') || fields.containsKey('hora') || fields.containsKey('horaActivada')) {
+      final fechaRaw = fields['fecha'];
+      final DateTime? fecha = fechaRaw is Timestamp ? fechaRaw.toDate() : fechaRaw as DateTime?;
+      final horaActivada = fields['horaActivada'] as bool? ?? false;
+      final hora = fields['hora'] as String?;
+
+      if (fecha != null && horaActivada && hora != null) {
+        final parts = hora.split(':');
+        final fechaHora = DateTime(fecha.year, fecha.month, fecha.day,
+            int.parse(parts[0]), int.parse(parts[1]));
+        updatedFields['fechaNotificacion'] = Timestamp.fromDate(fechaHora);
+        if (userId != null) updatedFields['userId'] = userId;
+      } else {
+        updatedFields['fechaNotificacion'] = null;
+      }
+    }
+
     await _db.collection('pleromos').doc(pleromiId)
         .collection('sizigias').doc(sizigiaId)
         .collection('misiones').doc(misionId)
-        .update(fields);
+        .update(updatedFields);
   }
 
   // ─── PLEROMOS ────────────────────────────────────────────────
