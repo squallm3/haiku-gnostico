@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'app.dart';
 import 'services/notification_service.dart';
@@ -26,33 +25,18 @@ void main() async {
   // Notificaciones background
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Pedir permiso y guardar token FCM
-  await _initFCM();
+  // Pedir permiso de notificaciones
+  await FirebaseMessaging.instance.requestPermission(alert: true, badge: true, sound: true);
 
   await NotificationService().init();
-  runApp(const ProviderScope(child: HaikuGnosticoApp()));
-}
 
-Future<void> _initFCM() async {
-  final messaging = FirebaseMessaging.instance;
-  await messaging.requestPermission(alert: true, badge: true, sound: true);
+  // Si ya había una sesión activa (el usuario no cerró la app), guardamos el token ahora.
+  await NotificationService().guardarTokenParaUsuarioActual();
 
-  final token = await messaging.getToken();
-  if (token != null) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
-      await FirebaseFirestore.instance.collection('users').doc(uid).set(
-        {'fcmToken': token}, SetOptions(merge: true));
-    }
-    debugPrint('FCM Token: $token');
-  }
-
-  // Actualizar token si se renueva
-  messaging.onTokenRefresh.listen((newToken) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
-      await FirebaseFirestore.instance.collection('users').doc(uid).set(
-        {'fcmToken': newToken}, SetOptions(merge: true));
-    }
+  // Si el token se renueva en cualquier momento, lo volvemos a guardar.
+  FirebaseMessaging.instance.onTokenRefresh.listen((_) {
+    NotificationService().guardarTokenParaUsuarioActual();
   });
+
+  runApp(const ProviderScope(child: HaikuGnosticoApp()));
 }

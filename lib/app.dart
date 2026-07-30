@@ -15,6 +15,8 @@ import 'features/classes/classes_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/auth/logout_screen.dart';
 import 'features/shell/main_shell.dart';
+import 'services/auth_service.dart';
+import 'services/notification_service.dart';
 
 final _router = GoRouter(
   initialLocation: '/',
@@ -51,6 +53,16 @@ class HaikuGnosticoApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tema = ref.watch(themeProvider);
+
+    // Cada vez que cambia el estado de autenticación (por ejemplo, al hacer login),
+    // guardamos el token FCM del usuario actual en Firestore.
+    ref.listen(authStateProvider, (previous, next) {
+      final user = next.value;
+      if (user != null) {
+        NotificationService().guardarTokenParaUsuarioActual();
+      }
+    });
+
     return MaterialApp.router(
       title: 'Escuela de los Haikus Gnósticos',
       debugShowCheckedModeBanner: false,
