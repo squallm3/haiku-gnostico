@@ -5,7 +5,12 @@
 .packages
 .pub-cache/
 .pub/
-build/
+
+# Build: ignorar todo excepto build/web (se versiona para dockerizar la web)
+build/*
+!build/web/
+build/web/*.map
+
 *.iml
 *.ipr
 *.iws
