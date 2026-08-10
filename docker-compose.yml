@@ -1,7 +1,7 @@
 services:
-  hk-tasks-web:
+  hk-tasks-web-android:
     build: .
-    container_name: hk-tasks-web
+    container_name: hk-tasks-web-android
     restart: unless-stopped
     ports:
       - "8937:80"
