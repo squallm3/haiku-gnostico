@@ -1,0 +1,12 @@
+services:
+  hk-tasks-web:
+    build: .
+    container_name: hk-tasks-web
+    restart: unless-stopped
+    ports:
+      - "8937:80"
+    networks:
+      - hk-red
+networks:
+  hk-red:
+    external: true
