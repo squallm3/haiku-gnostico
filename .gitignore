@@ -25,10 +25,9 @@ android/key.properties
 ios/
 macos/
 
-# Other platforms
+# Other platforms (Windows/Linux desktop no se usan, pero WEB sí)
 linux/
 windows/
-web/
 
 # Firebase Functions (Node.js)
 functions/node_modules/
