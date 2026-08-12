@@ -1,0 +1,12 @@
+services:
+  hk-apk-hosting:
+    build: .
+    container_name: hk-apk-hosting
+    restart: unless-stopped
+    ports:
+      - "8938:80"
+    networks:
+      - hk-red
+networks:
+  hk-red:
+    external: true

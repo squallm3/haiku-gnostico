@@ -46,3 +46,4 @@ npm-debug.log*
 pubspec.lock
 flutter_*.png
 gitignore.txt
+apk-hosting/app-release.apk
