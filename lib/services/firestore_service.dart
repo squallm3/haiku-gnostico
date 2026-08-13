@@ -5,11 +5,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/models/user_model.dart';
 import '../core/models/mission_model.dart';
 import '../core/constants/levels.dart';
+import 'api_service.dart';
 
-final firestoreServiceProvider = Provider((ref) => FirestoreService());
+final firestoreServiceProvider = Provider((ref) => FirestoreService(ref.read(apiServiceProvider)));
 
 class FirestoreService {
   final _db = FirebaseFirestore.instance;
+  final ApiService _api;
+
+  FirestoreService(this._api);
 
   // ─── USUARIOS ───────────────────────────────────────────────
   Stream<UserModel?> userStream(String uid) {
@@ -47,6 +51,7 @@ class FirestoreService {
         .collection('misiones').doc(misionId);
     final userRef = _db.collection('users').doc(userId);
     int nuevoNivelFinal = 0;
+    int xpMisionParaApi = 0;
 
     await _db.runTransaction((tx) async {
       final misionSnap = await tx.get(misionRef);
@@ -54,6 +59,7 @@ class FirestoreService {
       if (misionSnap.data()?['completada'] == true) return;
 
       final xpMision = (misionSnap.data()?['xpRecompensa'] as int?) ?? XP_POR_MISION;
+      xpMisionParaApi = xpMision;
       final userData = userSnap.exists ? userSnap.data()! : <String, dynamic>{
         'nivel': 1, 'xpAcumulada': 0,
         'titulo': 'Iniciado de la Grieta', 'artefacto': 'Diario de la Grieta Menor',
@@ -83,6 +89,14 @@ class FirestoreService {
         });
       }
     });
+
+    // Sincronizar XP con la API (MySQL) - best effort, no rompe el flujo si falla
+    if (xpMisionParaApi != 0) {
+      _api.sumarXp(xpMisionParaApi).catchError((e) {
+        // ignorar errores de red, la fuente local (Firestore) sigue siendo válida
+        return <String, dynamic>{};
+      });
+    }
 
     // Backup local
     await _guardarBackupLocal(userId);
@@ -154,6 +168,7 @@ class FirestoreService {
         .collection('misiones').doc(misionId);
     final userRef = _db.collection('users').doc(userId);
     int nivelBajadoFinal = 0;
+    int xpMisionParaApi = 0;
 
     await _db.runTransaction((tx) async {
       final misionSnap = await tx.get(misionRef);
@@ -161,6 +176,7 @@ class FirestoreService {
       if (misionSnap.data()?['completada'] != true) return;
 
       final xpMision = (misionSnap.data()?['xpRecompensa'] as int?) ?? XP_POR_MISION;
+      xpMisionParaApi = xpMision;
       final xpAntes = (userSnap.data()?['xpAcumulada'] as int?) ?? 0;
       final nivelAntes = (userSnap.data()?['nivel'] as int?) ?? 1;
       final nuevaXP = (xpAntes - xpMision).clamp(0, 999999999);
@@ -174,6 +190,13 @@ class FirestoreService {
         'titulo': nivelData.titulo, 'artefacto': nivelData.artefacto,
       });
     });
+
+    // Sincronizar XP con la API (MySQL) - best effort, no rompe el flujo si falla
+    if (xpMisionParaApi != 0) {
+      _api.sumarXp(-xpMisionParaApi).catchError((e) {
+        return <String, dynamic>{};
+      });
+    }
 
     // Backup local
     await _guardarBackupLocal(userId);
