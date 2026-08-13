@@ -31,6 +31,29 @@ class FirestoreService {
     await _db.collection('users').doc(uid).update({'tema': tema});
   }
 
+  /// Trae el nivel/XP real desde la API (MySQL) y actualiza el documento
+  /// de Firestore para que quede sincronizado con el resto de las apps
+  /// del ecosistema HK (ej: HK Real Life JRPG). Best effort: si la API
+  /// no responde, no rompe nada, Firestore queda con el último valor conocido.
+  Future<void> sincronizarNivelDesdeApi(String uid) async {
+    try {
+      final personaje = await _api.getPersonaje();
+      final nivel = personaje['nivelId'] as int? ?? 1;
+      final xpAcumulada = personaje['xpAcumulada'] as int? ?? 0;
+      final titulo = personaje['titulo'] as String? ?? 'Iniciado de la Grieta';
+      final artefacto = personaje['artefacto'] as String? ?? 'Diario de la Grieta Menor';
+
+      await _db.collection('users').doc(uid).set({
+        'nivel': nivel,
+        'xpAcumulada': xpAcumulada,
+        'titulo': titulo,
+        'artefacto': artefacto,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      // Sin conexión a la API o error de red: Firestore queda como estaba.
+    }
+  }
+
   Future<int> getNextSocioNumber() async {
     final snap = await _db.collection('users').orderBy('socioNumero', descending: true).limit(1).get();
     if (snap.docs.isEmpty) return 1;
@@ -93,7 +116,6 @@ class FirestoreService {
     // Sincronizar XP con la API (MySQL) - best effort, no rompe el flujo si falla
     if (xpMisionParaApi != 0) {
       _api.sumarXp(xpMisionParaApi).catchError((e) {
-        // ignorar errores de red, la fuente local (Firestore) sigue siendo válida
         return <String, dynamic>{};
       });
     }
@@ -265,7 +287,6 @@ class FirestoreService {
         .collection('sizigias')
         .snapshots()
         .map((s) {
-          // Filtrar documentos pendientes de confirmación (sin creadoEn = escritura optimista)
           final docs = s.docs.where((d) => d.metadata.hasPendingWrites == false || d.data()['creadoEn'] != null).toList();
           final list = docs.map(SizigiaModel.fromFirestore).toList();
           list.sort((a, b) {

@@ -17,6 +17,7 @@ import 'features/auth/logout_screen.dart';
 import 'features/shell/main_shell.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
+import 'services/firestore_service.dart';
 
 final _router = GoRouter(
   initialLocation: '/',
@@ -55,11 +56,13 @@ class HaikuGnosticoApp extends ConsumerWidget {
     final tema = ref.watch(themeProvider);
 
     // Cada vez que cambia el estado de autenticación (por ejemplo, al hacer login),
-    // guardamos el token FCM del usuario actual en Firestore.
+    // guardamos el token FCM del usuario actual y sincronizamos su nivel/XP real
+    // desde la API (MySQL), para que quede consistente con el resto de las apps HK.
     ref.listen(authStateProvider, (previous, next) {
       final user = next.value;
       if (user != null) {
         NotificationService().guardarTokenParaUsuarioActual();
+        ref.read(firestoreServiceProvider).sincronizarNivelDesdeApi(user.uid);
       }
     });
 
